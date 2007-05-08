@@ -1,0 +1,16 @@
+# Configure paths for GTK+
+# Owen Taylor 1997-2001
+
+dnl AM_PATH_GTK_2_0([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND [, MODULES]]]])
+
+AM_PATH_GTK_2_0(2.0.0, CFLAGS="$CFLAGS $GTK_CFLAGS" LIBS="$LIBS $GTK_LIBS",
+AC_MSG_ERROR(GTK+-2.0.0 not found.), gthread)
+
+dnl Test for GTK+, and define GTK_CFLAGS and GTK_LIBS, if gthread is specified in MODULES,
+
+dnl AM_PATH_XML2([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
+
+AM_PATH_XML2(2.0.0, CFLAGS="$CFLAGS $XML_CPPFLAGS" LIBS="$LIBS $XML_LIBS",
+AC_MSG_ERROR(LIBXML2-2.0.0 not found.))
+
+dnl Test for XML, and define XML_CPPFLAGS and XML_LIBS

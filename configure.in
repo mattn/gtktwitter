@@ -1,0 +1,36 @@
+# -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.57)
+AC_INIT(gtktwitter.c, 1.0.0, mattn.jp@gmail.com)
+AC_CONFIG_SRCDIR([gtktwitter.c])
+AM_CONFIG_HEADER([config.h])
+AM_INIT_AUTOMAKE(gtktwitter, 1.0.0, no-define) 
+
+# Checks for programs.
+AC_PROG_CC
+
+# Checks for libraries.
+AM_PATH_GTK_2_0(2.0.0, CFLAGS="$CFLAGS $GTK_CFLAGS" LIBS="$LIBS $GTK_LIBS",
+AC_MSG_ERROR(GTK+-2.0.0 not found.), gthread)
+AM_PATH_XML2(2.0.0, CFLAGS="$CFLAGS $XML_CPPFLAGS" LIBS="$LIBS $XML_LIBS",
+AC_MSG_ERROR(LIBXML2-2.0.0 not found.))
+AC_CHECK_LIB(curl, curl_easy_init)
+
+# Checks for header files.
+AC_CHECK_HEADERS([libintl.h locale.h memory.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_SIZE_T
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_HEADER_STDC
+AC_FUNC_REALLOC
+AC_CHECK_FUNCS([memset putenv setlocale strdup strpbrk])
+
+# Checks for library functions.
+AC_OUTPUT([Makefile])
+

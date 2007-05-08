@@ -1,0 +1,40 @@
+CFLAGS=/MT
+
+all : gtktwitter.exe
+
+gtktwitter.exe : gtktwitter.obj gtktwitter.res
+	link -out:gtktwitter.exe \
+		-LIBPATH:c:/gtk/lib \
+		gtktwitter.obj \
+		gtktwitter.res \
+		-subsystem:console \
+		gtk-win32-2.0.lib \
+		gdk-win32-2.0.lib \
+		glib-2.0.lib \
+		gthread-2.0.lib \
+		gdk_pixbuf-2.0.lib \
+		gobject-2.0.lib \
+		pango-1.0.lib \
+		xml2.lib \
+		libcurl.lib \
+		intl.lib \
+		shell32.lib
+
+gtktwitter.obj : gtktwitter.c
+	cl -c -GX \
+		$(CFLAGS) \
+		-Ic:/gtk/include \
+		-Ic:/gtk/include/gtk-2.0 \
+		-Ic:/gtk/include/cairo \
+		-Ic:/gtk/lib/glib-2.0/include \
+		-Ic:/gtk/lib/gtk-2.0/include \
+		-Ic:/gtk/include/glib-2.0 \
+		-Ic:/gtk/include/pango-1.0 \
+		-Ic:/gtk/include/atk-1.0 \
+		gtktwitter.c
+
+gtktwitter.res : gtktwitter.rc
+	rc gtktwitter.rc
+
+clean:
+	-rm *.obj *.res *.exe
