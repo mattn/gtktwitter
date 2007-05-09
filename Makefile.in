@@ -41,8 +41,9 @@ bin_PROGRAMS = gtktwitter$(EXEEXT)
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in $(top_srcdir)/configure AUTHORS COPYING \
-	ChangeLog INSTALL NEWS depcomp install-sh missing
+	$(srcdir)/config.h.in $(srcdir)/gtktwitter.spec.in \
+	$(top_srcdir)/configure AUTHORS COPYING ChangeLog INSTALL NEWS \
+	depcomp install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -51,7 +52,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno configure.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = gtktwitter.spec
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
@@ -170,7 +171,8 @@ gtktwitter_SOURCES = gtktwitter.c
 AM_CPPFLAGS = -DDATADIR=\"$(pkgdatadir)\" -DLOCALEDIR=\"$(datadir)/locale\"
 INCLUDES = ${GTK_CFLAGS}
 gtktwitter_LDADD = ${GTK_LIBS}
-dist_pkgdata_DATA = data/loading.gif data/twitter.png data/reload.png data/post.png
+dist_pkgdata_DATA = data/loading.gif data/twitter.png data/reload.png data/post.png data/logo.png
+EXTRA_DIST = gtktwitter.spec
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -226,6 +228,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+gtktwitter.spec: $(top_builddir)/config.status $(srcdir)/gtktwitter.spec.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(mkdir_p) "$(DESTDIR)$(bindir)"
@@ -344,7 +348,7 @@ distclean-tags:
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
-	$(mkdir_p) $(distdir)/data
+	$(mkdir_p) $(distdir)/. $(distdir)/data
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \
