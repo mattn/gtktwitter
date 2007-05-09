@@ -27,7 +27,8 @@
 #define APP_NAME _("gtktwitter")
 #define TWITTER_UPDATE_URL "http://twitter.com/statuses/update.xml"
 #define TWITTER_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
-#define URL_ACCEPT_LETTER "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'()%"
+#define ACCEPT_LETTER_URL  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'()%"
+#define ACCEPT_LETTER_NAME "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
 #define GET_CONTENT(x) (x->children ? x->children->content : NULL)
 
@@ -324,12 +325,14 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 			GtkTextTag *tag;
 			int len;
 			char* link;
-			char* tmp = ptr;
+			char* tmp;
+			gchar* url;
 
 			if (last != ptr)
 				gtk_text_buffer_insert(buffer, iter, last, ptr-last);
 
-			while(*tmp && strchr(URL_ACCEPT_LETTER, *tmp)) tmp++;
+			tmp = ptr;
+			while(*tmp && strchr(ACCEPT_LETTER_URL, *tmp)) tmp++;
 			len = (int)(tmp-ptr);
 			link = malloc(len+1);
 			memset(link, 0, len+1);
@@ -342,11 +345,43 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 					"underline",
 					PANGO_UNDERLINE_SINGLE, 
 					NULL);
-			g_object_set_data(G_OBJECT(tag), "url", (gpointer)link);
+			url = g_strdup(link);
+			g_object_set_data(G_OBJECT(tag), "url", (gpointer)url);
 			gtk_text_buffer_insert_with_tags(buffer, iter, link, -1, tag, NULL);
-			last = tmp;
-		}
-		ptr++;
+			free(link);
+			ptr = last = tmp;
+		} else
+		if (*ptr == '@' || !strncmp(ptr, "\xef\xbc\xa0", 3)) {
+			GtkTextTag *tag;
+			int len;
+			char* link;
+			char* tmp;
+			gchar* url;
+
+			if (last != ptr)
+				gtk_text_buffer_insert(buffer, iter, last, ptr-last);
+
+			tmp = ptr + (*ptr == '@' ? 1 : 3);
+			while(*tmp && strchr(ACCEPT_LETTER_NAME, *tmp)) tmp++;
+			len = (int)(tmp-ptr);
+			link = malloc(len+1);
+			memset(link, 0, len+1);
+			strncpy(link, ptr, len);
+			url = g_strdup_printf("http://twitter.com/%s", link + (*ptr == '@' ? 1 : 3));
+			tag = gtk_text_buffer_create_tag(
+					buffer,
+					NULL, 
+					"foreground",
+					"blue", 
+					"underline",
+					PANGO_UNDERLINE_SINGLE, 
+					NULL);
+			g_object_set_data(G_OBJECT(tag), "url", (gpointer)url);
+			gtk_text_buffer_insert_with_tags(buffer, iter, link, -1, tag, NULL);
+			free(link);
+			ptr = last = tmp;
+		} else
+			ptr++;
 	}
 	if (last != ptr)
 		gtk_text_buffer_insert(buffer, iter, last, ptr-last);
@@ -563,13 +598,17 @@ leave:
 }
 
 static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
+	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
-	gpointer result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
+	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+	gtk_widget_set_sensitive(toolbox, FALSE);
+	result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
 		/* show error message */
 		error_dialog(widget, result);
 		g_free(result);
 	}
+	gtk_widget_set_sensitive(toolbox, TRUE);
 }
 
 /**
@@ -658,8 +697,11 @@ leave:
 }
 
 static void post_status(GtkWidget* widget, gpointer user_data) {
+	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
-	gpointer  result = process_func(post_status_thread, window, window, _("posting status..."));
+	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+	gtk_widget_set_sensitive(toolbox, FALSE);
+	result = process_func(post_status_thread, window, window, _("posting status..."));
 	if (!result)
 		result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
@@ -667,6 +709,7 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 		error_dialog(widget, result);
 		g_free(result);
 	}
+	gtk_widget_set_sensitive(toolbox, TRUE);
 }
 
 /**
@@ -1062,6 +1105,7 @@ int main(int argc, char* argv[]) {
 	/* horizontal container box for buttons and entry */
 	hbox = gtk_hbox_new(FALSE, 6);
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, TRUE, 0);
+	g_object_set_data(G_OBJECT(window), "toolbox", hbox);
 
 	/* update button */
 	button = gtk_button_new();
