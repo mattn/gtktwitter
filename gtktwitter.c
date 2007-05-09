@@ -27,10 +27,10 @@
 #define APP_NAME _("gtktwitter")
 #define TWITTER_UPDATE_URL "http://twitter.com/statuses/update.xml"
 #define TWITTER_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
-#define ACCEPT_LETTER_URL  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'()%"
+#define ACCEPT_LETTER_URL  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
-#define GET_CONTENT(x) (x->children ? x->children->content : NULL)
+#define GET_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
 static GdkCursor *hand_cursor = NULL;
 static GdkCursor *regular_cursor = NULL;
@@ -872,11 +872,9 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	event = (GdkEventButton*)ev;
 	if (event->button != 1) return FALSE;
 
-	gdk_threads_enter();
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
 	gtk_text_buffer_get_selection_bounds(buffer, &start, &end);
 	if (gtk_text_iter_get_offset(&start) != gtk_text_iter_get_offset(&end)) {
-		gdk_threads_leave();
 		return FALSE;
 	}
 	gtk_text_view_window_to_buffer_coords(
@@ -926,26 +924,22 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 		g_free(url);
 		gtk_widget_queue_draw(toplevel);
 	}
-	gdk_threads_leave();
 	return FALSE;
 }
 
 static gboolean textview_motion(GtkWidget* textview, GdkEventMotion* event) {
 	gint x, y;
-	gdk_threads_enter();
 	gtk_text_view_window_to_buffer_coords(
 			GTK_TEXT_VIEW(textview),
 			GTK_TEXT_WINDOW_WIDGET,
 			(gint)event->x, (gint)event->y, &x, &y);
 	textview_change_cursor(textview, x, y);
 	gdk_window_get_pointer(textview->window, NULL, NULL, NULL);
-	gdk_threads_leave();
 	return FALSE;
 }
 
 static gboolean textview_visibility(GtkWidget* textview, GdkEventVisibility* event) {
 	gint wx, wy, x, y;
-	gdk_threads_enter();
 	gdk_window_get_pointer(textview->window, &wx, &wy, NULL);
 	gtk_text_view_window_to_buffer_coords(
 			GTK_TEXT_VIEW(textview),
@@ -953,7 +947,6 @@ static gboolean textview_visibility(GtkWidget* textview, GdkEventVisibility* eve
 			wx, wy, &x, &y);
 	textview_change_cursor(textview, x, y);
 	gdk_window_get_pointer(textview->window, NULL, NULL, NULL);
-	gdk_threads_leave();
 	return FALSE;
 }
 
