@@ -1,5 +1,7 @@
 * version 0.0.4
 	anchor for URL links.
+	anchor for @ mark.
+	changing sensitive of buttons.
 * version 0.0.3
 	fixed overflow code.
 	make spec file for rpm.
