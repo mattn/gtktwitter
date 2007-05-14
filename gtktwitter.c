@@ -27,6 +27,7 @@
 #define APP_NAME _("gtktwitter")
 #define TWITTER_UPDATE_URL "http://twitter.com/statuses/update.xml"
 #define TWITTER_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
+#define TINYURL_API_URL    "http://tinyurl.com/api-create.php"
 #define ACCEPT_LETTER_URL  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
@@ -50,9 +51,124 @@ typedef struct _PROCESS_THREAD_INFO {
 /**
  * curl callback
  */
+static char* response_cond = NULL;	/* response condition */
 static char* response_mime = NULL;	/* response content-type. ex: "text/html" */
 static char* response_data = NULL;	/* response data from server. */
 static size_t response_size = 0;	/* response size of data */
+
+time_t strtotime(char *s) {
+	char *os;
+	int i;
+	struct tm tm;
+	int isleap;
+
+	static int mday[2][12] = {
+		31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+		31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+	};
+	static char* wday[] = {
+		"Sunday", "Monday", "Tuesday", "Wednesday",
+		"Thursday", "Friday", "Saturday",
+		NULL
+	};
+	static char* mon[] = {
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+		NULL
+	};
+
+	os = s;
+	/* Sunday, */
+	for(i = 0; i < sizeof(wday)/sizeof(wday[0]); i++) {
+		if(strncmp(s, wday[i], strlen(wday[i])) == 0){
+			s += strlen(wday[i]);
+			break;
+		}
+		if(strncmp(s, wday[i], 3) == 0){
+			s += 3;
+			break;
+		}
+	}
+	if (i == sizeof(wday)/sizeof(wday[0])){
+		return -1;
+	}
+	if (*s++ != ',' || *s++ != ' ') {
+		return -1;
+	}
+
+	/* 25- */
+	if(!isdigit(s[0]) || !isdigit(s[1]) || (s[2]!='-' && s[2]!=' ')){
+		return -1;
+	}
+	tm.tm_mday = strtol(s, 0, 10);
+	s += 3;
+
+	/* Jan- */
+	for(i = 0; i<sizeof(mon)/sizeof(mon[0]); i++) {
+		if(strncmp(s, mon[i], 3) == 0){
+			tm.tm_mon = i;
+			s += 3;
+			break;
+		}
+	}
+	if(i == sizeof(mon)/sizeof(mon[0])){
+		return -1;
+	}
+	if(s[0] != '-' && s[0] != ' '){
+		return -1;
+	}
+	s++;
+
+	/* 2002 */
+	if(!isdigit(s[0]) || !isdigit(s[1])){
+		return -1;
+	}
+	tm.tm_year = strtol(s, 0, 10);
+	s += 2;
+	if(isdigit(s[0]) && isdigit(s[1]))
+		s += 2;
+	else{
+		if(tm.tm_year <= 68)
+			tm.tm_year += 2000;
+		else
+			tm.tm_year += 1900;
+	}
+	isleap = tm.tm_year%4==0 && (tm.tm_year%100!=0 || tm.tm_year%400==0);
+	if(tm.tm_mday==0 || tm.tm_mday > mday[isleap][tm.tm_mon]){
+		return -1;
+	}
+	tm.tm_year -= 1900;
+	if(*s++ != ' '){
+		return -1;
+	}
+
+	if(!isdigit(s[0]) || !isdigit(s[1]) || s[2]!=':'
+	|| !isdigit(s[3]) || !isdigit(s[4]) || s[5]!=':'
+	|| !isdigit(s[6]) || !isdigit(s[7]) || s[8]!=' '){
+		return -1;
+	}
+
+	tm.tm_hour = atoi(s);
+	tm.tm_min = atoi(s+3);
+	tm.tm_sec = atoi(s+6);
+	if(tm.tm_hour >= 24 || tm.tm_min >= 60 || tm.tm_sec >= 60){
+		return -1;
+	}
+	s += 9;
+
+	if(strncmp(s, "GMT", 3) != 0){
+		return -1;
+	}
+	tm.tm_yday = 0;
+	/*
+	{
+		time_t gmc = mktime(&tm)-900;
+		struct tm* gmt = gmtime(&gmc);
+		memcpy(&tm, gmt, sizeof(tm));
+	}
+	*/
+	return mktime(&tm);
+}
 
 static size_t handle_returned_data(char* ptr, size_t size, size_t nmemb, void* stream) {
 	if (!response_data)
@@ -76,7 +192,20 @@ static size_t handle_returned_header(void* ptr, size_t size, size_t nmemb, void*
 		char* stop = header + 14;
 		stop = strpbrk(header + 14, "\r\n;");
 		if (stop) *stop = 0;
+		if (response_mime) free(response_mime);
 		response_mime = strdup(header + 14);
+	}
+	if (strncmp(header, "Last-Modified: ", 15) == 0) {
+		char* stop = strpbrk(header, "\r\n;");
+		if (stop) *stop = 0;
+		if (response_cond) free(response_cond);
+		response_cond = strdup(header);
+	}
+	if (strncmp(header, "ETag: ", 6) == 0) {
+		char* stop = strpbrk(header, "\r\n;");
+		if (stop) *stop = 0;
+		if (response_cond) free(response_cond);
+		response_cond = strdup(header);
 	}
 	free(header);
 	return size*nmemb;
@@ -85,7 +214,7 @@ static size_t handle_returned_header(void* ptr, size_t size, size_t nmemb, void*
 /**
  * string utilities
  */
-static char* xml_decode_alloc(char* str) {
+static char* xml_decode_alloc(const char* str) {
 	char* buf = NULL;
 	unsigned char* pbuf = NULL;
 	int len = 0;
@@ -125,7 +254,48 @@ static char* xml_decode_alloc(char* str) {
 	return buf;
 }
 
-static char* url_encode_alloc(char* str) {
+static char* get_tiny_url_alloc(const char* url, GError** error) {
+	char api_url[2048];
+	CURLcode res;
+	GError* _error = NULL;
+	CURL* curl;
+	char* ret = NULL;
+	int status = 0;
+
+	snprintf(api_url, sizeof(api_url)-1, "%s/?url=%s", TINYURL_API_URL, url);
+
+	curl = curl_easy_init();
+	if (!curl) return NULL;
+	curl_easy_setopt(curl, CURLOPT_URL, api_url);
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	response_cond = NULL;
+	response_mime = NULL;
+	response_data = NULL;
+	response_size = 0;
+	res = curl_easy_perform(curl);
+	res = res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
+	curl_easy_cleanup(curl);
+	if (res == CURLE_OK && status == 200) {
+		ret = malloc(response_size+1);
+		memset(ret, 0, response_size+1);
+		memcpy(ret, (char*)response_data, response_size);
+	}
+	else
+		_error = g_error_new_literal(G_FILE_ERROR, res, curl_easy_strerror(res));
+
+	if (response_cond) free(response_cond);
+	if (response_mime) free(response_mime);
+	if (response_data) free(response_data);
+	response_cond = NULL;
+	response_mime = NULL;
+	response_data = NULL;
+	response_size = 0;
+	if (error && _error) *error = _error;
+	return ret;
+}
+
+static char* url_encode_alloc(const char* str) {
 	static const int force_encode_all = TRUE;
 	const char* hex = "0123456789abcdef";
 
@@ -153,6 +323,59 @@ static char* url_encode_alloc(char* str) {
 	return buf;
 }
 
+char* sanitize_message_alloc(const char* message) {
+	const char* ptr = message;
+	const char* last = ptr;
+	char* ret = NULL;
+	int len = 0;
+	while(*ptr) {
+		if (!strncmp(ptr, "http://", 7) || !strncmp(ptr, "ftp://", 6)) {
+			char* link;
+			char* tiny_url;
+			const char* tmp;
+
+			if (last != ptr) {
+				len += (ptr-last);
+				if (!ret) {
+					ret = malloc(len+1);
+					memset(ret, 0, len+1);
+				} else ret = realloc(ret, len+1);
+				strncat(ret, last, ptr-last);
+			}
+
+			tmp = ptr;
+			while(*tmp && strchr(ACCEPT_LETTER_URL, *tmp)) tmp++;
+			link = malloc(tmp-ptr+1);
+			memset(link, 0, tmp-ptr+1);
+			memcpy(link, ptr, tmp-ptr);
+			tiny_url = get_tiny_url_alloc(link, NULL);
+			if (tiny_url) {
+				free(link);
+				link = tiny_url;
+			}
+
+			len += strlen(link);
+			if (!ret) {
+				ret = malloc(len+1);
+				memset(ret, 0, len+1);
+			} else ret = realloc(ret, len+1);
+			strcat(ret, link);
+			free(link);
+			ptr = last = tmp;
+		} else
+			ptr++;
+	}
+	if (last != ptr) {
+		len += (ptr-last);
+		if (!ret) {
+			ret = malloc(len+1);
+			memset(ret, 0, len+1);
+		} else ret = realloc(ret, len+1);
+		strncat(ret, last, ptr-last);
+	}
+	return ret;
+}
+
 /**
  * loading icon
  */
@@ -165,6 +388,7 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 	CURLcode res = CURLE_OK;
 
 	/* initialize callback data */
+	response_cond = NULL;
 	response_mime = NULL;
 	response_data = NULL;
 	response_size = 0;
@@ -194,10 +418,12 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 	}
 
 	/* cleanup callback data */
+	if (response_cond) free(response_cond);
 	if (response_mime) free(response_mime);
 	if (response_data) free(response_data);
-	response_data = NULL;
+	response_cond = NULL;
 	response_mime = NULL;
+	response_data = NULL;
 	response_size = 0;
 	if (error && _error) *error = _error;
 	return pixbuf;
@@ -320,6 +546,7 @@ void error_dialog(GtkWidget* widget, const char* message) {
 static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const char* status) {
 	char* ptr = (char*)status;
 	char* last = ptr;
+	if (!status) return;
 	while(*ptr) {
 		if (!strncmp(ptr, "http://", 7) || !strncmp(ptr, "ftp://", 6)) {
 			GtkTextTag *tag;
@@ -397,6 +624,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	GtkTextTag* date_tag = NULL;
 	CURL* curl = NULL;
 	CURLcode res = CURLE_OK;
+	struct curl_slist *headers = NULL;
 	int status = 0;
 
 	char url[2048];
@@ -407,6 +635,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	int n;
 	int length;
 	gpointer result_str = NULL;
+	static char last_condition[256] = {0};
 
 	xmlDocPtr doc = NULL;
 	xmlNodeSetPtr nodes = NULL;
@@ -429,6 +658,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
 	/* initialize callback data */
+	response_cond = NULL;
 	response_mime = NULL;
 	response_data = NULL;
 	response_size = 0;
@@ -439,18 +669,25 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	curl_easy_setopt(curl, CURLOPT_USERPWD, auth);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, handle_returned_header);
+	if (last_condition[0] != 0) {
+		headers = curl_slist_append(headers, last_condition);
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+	}
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 	res = curl_easy_perform(curl);
 	res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
+	if (headers) curl_slist_free_all(headers);
 
-	if (response_size == 0) {
+	if (status == 0) {
 		result_str = g_strdup("no server response");
 		goto leave;
 	}
 	recv_data = malloc(response_size+1);
 	memset(recv_data, 0, response_size+1);
 	memcpy(recv_data, response_data, response_size);
+	if (status == 304)
+		goto leave;
 	if (status != 200 || (response_mime && strcmp(response_mime, "application/xml"))) {
 		/* failed to get xml */
 		if (response_data) {
@@ -460,6 +697,13 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		} else
 			result_str = g_strdup("unknown server response");
 		goto leave;
+	}
+	if (response_cond) {
+		if (!strncmp(response_cond, "ETag: ", 6))
+			sprintf(last_condition, "If-None-Match: %s", response_cond+6);
+		else
+		if (!strncmp(response_cond, "Last-Modified: ", 15))
+			sprintf(last_condition, "If-Modified-Since: %s", response_cond+15);
 	}
 
 	/* parse xml */
@@ -589,8 +833,11 @@ leave:
 	if (path) xmlXPathFreeObject(path);
 	if (ctx) xmlXPathFreeContext(ctx);
 	if (doc) xmlFreeDoc(doc);
+	if (response_cond) free(response_cond);
 	if (response_mime) free(response_mime);
 	if (response_data) free(response_data);
+	response_cond = NULL;
+	response_mime = NULL;
 	response_data = NULL;
 	response_size = 0;
 
@@ -624,6 +871,7 @@ static gpointer post_status_thread(gpointer data) {
 	char url[2048];
 	char auth[512];
 	char* message = NULL;
+	char* sanitized_message = NULL;
 	char* mail = NULL;
 	char* pass = NULL;
 	gpointer result_str = NULL;
@@ -639,7 +887,11 @@ static gpointer post_status_thread(gpointer data) {
 	/* making authenticate info */
 	memset(url, 0, sizeof(url));
 	strncpy(url, TWITTER_UPDATE_URL, sizeof(url)-1);
+	sanitized_message = sanitize_message_alloc(message);
+	if (!message) return NULL;
+	message = sanitized_message;
 	message = url_encode_alloc(message);
+	free(sanitized_message);
 	if (message) {
 		strncat(url, "?status=", sizeof(url)-1);;
 		strncat(url, message, sizeof(url)-1);
@@ -649,6 +901,7 @@ static gpointer post_status_thread(gpointer data) {
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
 	/* initialize callback data */
+	response_cond = NULL;
 	response_mime = NULL;
 	response_data = NULL;
 	response_size = 0;
@@ -688,10 +941,12 @@ static gpointer post_status_thread(gpointer data) {
 
 leave:
 	/* cleanup callback data */
+	if (response_cond) free(response_cond);
 	if (response_mime) free(response_mime);
 	if (response_data) free(response_data);
 	response_data = NULL;
 	response_mime = NULL;
+	response_cond = NULL;
 	response_size = 0;
 	return result_str;
 }

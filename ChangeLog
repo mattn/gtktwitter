@@ -1,3 +1,6 @@
+* version 0.0.5
+	supported ETag and If-Modified-Since.
+	make tiny url with tinyurl.com.
 * version 0.0.4
 	anchor for URL links.
 	anchor for @ mark.
