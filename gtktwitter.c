@@ -25,11 +25,13 @@
 
 #define APP_TITLE _("GtkTwitter")
 #define APP_NAME _("gtktwitter")
-#define TWITTER_UPDATE_URL "http://twitter.com/statuses/update.xml"
-#define TWITTER_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
-#define TINYURL_API_URL    "http://tinyurl.com/api-create.php"
-#define ACCEPT_LETTER_URL  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
-#define ACCEPT_LETTER_NAME "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+#define TWITTER_UPDATE_URL         "http://twitter.com/statuses/update.xml"
+#define TWITTER_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
+#define TWITTER_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
+#define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
+#define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
+#define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+#define RELOAD_TIMER_SPAN          600000
 
 #define GET_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
@@ -48,6 +50,11 @@ typedef struct _PROCESS_THREAD_INFO {
 	gpointer retval;
 } PROCESS_THREAD_INFO;
 
+static guint timer_tag = 0;
+static void start_reload_timer(GtkWidget* toplevel);
+static void stop_reload_timer(GtkWidget* toplevel);
+static void reset_reload_timer(GtkWidget* toplevel);
+
 /**
  * curl callback
  */
@@ -56,7 +63,24 @@ static char* response_mime = NULL;	/* response content-type. ex: "text/html" */
 static char* response_data = NULL;	/* response data from server. */
 static size_t response_size = 0;	/* response size of data */
 
-time_t strtotime(char *s) {
+static initialize_http_response() {
+	response_cond = NULL;
+	response_mime = NULL;
+	response_data = NULL;
+	response_size = 0;
+}
+
+static terminate_http_response() {
+	if (response_cond) free(response_cond);
+	if (response_mime) free(response_mime);
+	if (response_data) free(response_data);
+	response_cond = NULL;
+	response_mime = NULL;
+	response_data = NULL;
+	response_size = 0;
+}
+
+static time_t strtotime(char *s) {
 	char *os;
 	int i;
 	struct tm tm;
@@ -264,15 +288,14 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 
 	snprintf(api_url, sizeof(api_url)-1, "%s/?url=%s", TINYURL_API_URL, url);
 
+	/* initialize callback data */
+	initialize_http_response();
+
 	curl = curl_easy_init();
 	if (!curl) return NULL;
 	curl_easy_setopt(curl, CURLOPT_URL, api_url);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
 	res = curl_easy_perform(curl);
 	res = res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
@@ -284,13 +307,8 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 	else
 		_error = g_error_new_literal(G_FILE_ERROR, res, curl_easy_strerror(res));
 
-	if (response_cond) free(response_cond);
-	if (response_mime) free(response_mime);
-	if (response_data) free(response_data);
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+	/* cleanup callback data */
+	terminate_http_response();
 	if (error && _error) *error = _error;
 	return ret;
 }
@@ -388,10 +406,7 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 	CURLcode res = CURLE_OK;
 
 	/* initialize callback data */
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+	initialize_http_response();
 
 	if (!strncmp(url, "file:///", 8) || g_file_test(url, G_FILE_TEST_EXISTS)) {
 		gchar* newurl = g_filename_from_uri(url, NULL, NULL);
@@ -418,13 +433,7 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 	}
 
 	/* cleanup callback data */
-	if (response_cond) free(response_cond);
-	if (response_mime) free(response_mime);
-	if (response_data) free(response_data);
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+	terminate_http_response();
 	if (error && _error) *error = _error;
 	return pixbuf;
 }
@@ -524,7 +533,7 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 /**
  * dialog message func
  */
-void error_dialog(GtkWidget* widget, const char* message) {
+static void error_dialog(GtkWidget* widget, const char* message) {
 	GtkWidget* dialog;
 	dialog = gtk_message_dialog_new(
 			GTK_WINDOW(gtk_widget_get_toplevel(widget)),
@@ -653,15 +662,12 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	gdk_threads_leave();
 
 	memset(url, 0, sizeof(url));
-	strncpy(url, TWITTER_STATUS_URL, sizeof(url)-1);
+	strncpy(url, TWITTER_SELF_STATUS_URL, sizeof(url)-1);
 	memset(auth, 0, sizeof(auth));
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
 	/* initialize callback data */
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+	initialize_http_response();
 
 	/* perform http */
 	curl = curl_easy_init();
@@ -828,18 +834,13 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	gdk_threads_leave();
 
 leave:
-	/* cleanup callback data */
 	if (recv_data) free(recv_data);
 	if (path) xmlXPathFreeObject(path);
 	if (ctx) xmlXPathFreeContext(ctx);
 	if (doc) xmlFreeDoc(doc);
-	if (response_cond) free(response_cond);
-	if (response_mime) free(response_mime);
-	if (response_data) free(response_data);
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+
+	/* cleanup callback data */
+	terminate_http_response();
 
 	return result_str;
 }
@@ -848,6 +849,8 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+
+	stop_reload_timer(window);
 	gtk_widget_set_sensitive(toolbox, FALSE);
 	result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
@@ -856,6 +859,7 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 		g_free(result);
 	}
 	gtk_widget_set_sensitive(toolbox, TRUE);
+	start_reload_timer(window);
 }
 
 /**
@@ -901,10 +905,7 @@ static gpointer post_status_thread(gpointer data) {
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
 	/* initialize callback data */
-	response_cond = NULL;
-	response_mime = NULL;
-	response_data = NULL;
-	response_size = 0;
+	initialize_http_response();
 
 	/* perform http */
 	curl = curl_easy_init();
@@ -976,6 +977,7 @@ static gboolean on_entry_keyp_ress(GtkWidget *widget, GdkEventKey* event, gpoint
 	if (!message || strlen(message) == 0) return FALSE;
 	if (event->keyval == GDK_Return)
 		post_status(widget, user_data);
+	reset_reload_timer(gtk_widget_get_toplevel(widget));
 	return FALSE;
 }
 
@@ -1233,6 +1235,31 @@ static void buffer_delete_range(GtkTextBuffer* buffer, GtkTextIter* start, GtkTe
 		g_slist_free(tags);
 	}
 	gtk_text_iter_free(iter);
+}
+
+/**
+ * timer register
+ */
+static guint reload_timer(gpointer data) {
+	GtkWidget* window = (GtkWidget*)data;
+	gdk_threads_enter();
+	update_friends_statuses(NULL, window);
+	gdk_threads_leave();
+	return 0;
+}
+
+static void stop_reload_timer(GtkWidget* toplevel) {
+	if (timer_tag != 0) g_source_remove(timer_tag);
+}
+
+static void start_reload_timer(GtkWidget* toplevel) {
+	stop_reload_timer(toplevel);
+	timer_tag = g_timeout_add(RELOAD_TIMER_SPAN, (GSourceFunc)reload_timer, toplevel);
+}
+
+static void reset_reload_timer(GtkWidget* toplevel) {
+	stop_reload_timer(toplevel);
+	start_reload_timer(toplevel);
 }
 
 /**
