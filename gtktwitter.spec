@@ -1,5 +1,5 @@
 Name:           gtktwitter
-Version:        0.0.4
+Version:        0.0.5
 Release:        1%{?dist}
 Summary:        A Twitter client for Linux which using GTK
 Group:          Applications/Network

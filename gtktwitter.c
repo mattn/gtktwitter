@@ -1138,25 +1138,19 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 		}
 	}
 	if (hovering != hovering_over_link) {
+		char* message = NULL;
 		hovering_over_link = hovering;
 		gdk_window_set_cursor(
 				gtk_text_view_get_window(
 					GTK_TEXT_VIEW(textview),
 					GTK_TEXT_WINDOW_TEXT),
 				hovering_over_link ? hand_cursor : regular_cursor);
-		/*
 		if (hovering_over_link)
-			gtk_tooltips_set_tip(
-					GTK_TOOLTIPS(tooltips),
-					textview,
-					_("what are you doing?"),
-					_("what are you doing?"));
-		else
-			gtk_tooltips_set_tip(
-					GTK_TOOLTIPS(tooltips),
-					textview,
-					NULL, NULL);
-		*/
+			message = _("what are you doing?"),
+		gtk_tooltips_set_tip(
+				GTK_TOOLTIPS(tooltips),
+				textview,
+				message, message);
 	}
 }
 
