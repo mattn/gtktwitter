@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-15 18:38+0900\n"
+"POT-Creation-Date: 2007-05-15 18:41+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,24 +16,32 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../gtktwitter.c:835 ../gtktwitter.c:954
+#: ../gtktwitter.c:26
+msgid "GtkTwitter"
+msgstr ""
+
+#: ../gtktwitter.c:27
+msgid "gtktwitter"
+msgstr ""
+
+#: ../gtktwitter.c:874 ../gtktwitter.c:993
 msgid "updating statuses..."
-msgstr "ステータス更新中..."
+msgstr ""
 
-#: ../gtktwitter.c:952
+#: ../gtktwitter.c:991
 msgid "posting status..."
-msgstr "ステータス送信中..."
+msgstr ""
 
-#: ../gtktwitter.c:995
+#: ../gtktwitter.c:1034
 msgid "GtkTwitter Login"
-msgstr "GtkTwitter ログイン"
+msgstr ""
 
 #. mail
-#: ../gtktwitter.c:1003
+#: ../gtktwitter.c:1042
 msgid "_Mail:"
-msgstr "メール(_M):"
+msgstr ""
 
 #. pass
-#: ../gtktwitter.c:1022
+#: ../gtktwitter.c:1061
 msgid "_Password:"
-msgstr "パスワード(_P):"
+msgstr ""
