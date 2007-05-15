@@ -868,6 +868,8 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
+	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
 
 	stop_reload_timer(window);
 	gtk_widget_set_sensitive(toolbox, FALSE);
@@ -1310,6 +1312,7 @@ int main(int argc, char* argv[]) {
 	GtkWidget* window = NULL;
 	GtkWidget* vbox = NULL;
 	GtkWidget* hbox = NULL;
+	GtkWidget* toolbox = NULL;
 	GtkWidget* swin = NULL;
 	GtkWidget* textview = NULL;
 	GtkWidget* image = NULL;
@@ -1425,10 +1428,14 @@ int main(int argc, char* argv[]) {
 			NULL);
 	g_object_set_data(G_OBJECT(buffer), "date_tag", date_tag);
 
+	/* toolbox */
+	toolbox = gtk_vbox_new(FALSE, 6);
+	gtk_box_pack_start(GTK_BOX(vbox), toolbox, FALSE, TRUE, 0);
+	g_object_set_data(G_OBJECT(window), "toolbox", toolbox);
+
 	/* horizontal container box for buttons and entry */
 	hbox = gtk_hbox_new(FALSE, 6);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, TRUE, 0);
-	g_object_set_data(G_OBJECT(window), "toolbox", hbox);
+	gtk_box_pack_start(GTK_BOX(toolbox), hbox, FALSE, TRUE, 0);
 
 	/* home button */
 	button = gtk_button_new();
@@ -1455,7 +1462,8 @@ int main(int argc, char* argv[]) {
 	entry = gtk_entry_new();
 	g_object_set_data(G_OBJECT(window), "entry", entry);
 	g_signal_connect(G_OBJECT(entry), "key-press-event", G_CALLBACK(on_entry_keyp_ress), window);
-	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(toolbox), entry, FALSE, TRUE, 0);
+	//gtk_widget_set_size_request(entry, -1, 50);
 
 	/* request initial window size */
 	gtk_widget_set_size_request(window, 300, 400);
