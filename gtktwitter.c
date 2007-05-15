@@ -1145,12 +1145,14 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 					GTK_TEXT_VIEW(textview),
 					GTK_TEXT_WINDOW_TEXT),
 				hovering_over_link ? hand_cursor : regular_cursor);
+		/* TODO: tooltips for user icon.
 		if (hovering_over_link)
 			message = _("what are you doing?"),
 		gtk_tooltips_set_tip(
 				GTK_TOOLTIPS(tooltips),
 				textview,
 				message, message);
+		*/
 	}
 }
 
