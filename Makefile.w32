@@ -38,3 +38,13 @@ gtktwitter.res : gtktwitter.rc
 
 clean:
 	-rm *.obj *.res *.exe
+
+package:
+	-mkdir win32package\data 2> NUL
+	cp data/logo.ico win32package/data/.
+	cp data/*.gif win32package/data/.
+	cp data/*.png win32package/data/.
+	-mkdir win32package\share\locale\ja\LC_MESSAGES 2> NUL
+	msgfmt -o win32package/share/locale/ja/LC_MESSAGES/gtktwitter.mo po/ja.po
+	cp libcurl.dll win32package
+	cp zlib1.dll win32package
