@@ -1,39 +1,62 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Copyright (C) 2007 the GtkTwitter's copyright holder
+# This file is distributed under the same license as the GtkTwitter package.
+# mattn <mattn.jp at gmail.com>, 2007.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: 0.0.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-15 18:38+0900\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"POT-Creation-Date: 2007-05-15 20:07+0900\n"
+"PO-Revision-Date: 2007-05-15 20:07+0900\n"
+"Last-Translator: mattn <mattn.jp at gmail.com>\n"
+"Language-Team: mattn <mattn.jp at gmail.com>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../gtktwitter.c:835 ../gtktwitter.c:954
+#: ../gtktwitter.c:26
+msgid "GtkTwitter"
+msgstr "GtkTwitter"
+
+#: ../gtktwitter.c:27
+msgid "gtktwitter"
+msgstr "gtktwitter"
+
+#: ../gtktwitter.c:876 ../gtktwitter.c:995
 msgid "updating statuses..."
 msgstr "ステータス更新中..."
 
-#: ../gtktwitter.c:952
+#: ../gtktwitter.c:993
 msgid "posting status..."
 msgstr "ステータス送信中..."
 
-#: ../gtktwitter.c:995
+#: ../gtktwitter.c:1036
 msgid "GtkTwitter Login"
 msgstr "GtkTwitter ログイン"
 
 #. mail
-#: ../gtktwitter.c:1003
+#: ../gtktwitter.c:1044
 msgid "_Mail:"
 msgstr "メール(_M):"
 
 #. pass
-#: ../gtktwitter.c:1022
+#: ../gtktwitter.c:1063
 msgid "_Password:"
 msgstr "パスワード(_P):"
+
+#: ../gtktwitter.c:1460 ../gtktwitter.c:1461
+msgid "go home"
+msgstr "ホーム"
+
+#: ../gtktwitter.c:1472 ../gtktwitter.c:1473
+msgid "reload statuses"
+msgstr "リロード"
+
+#: ../gtktwitter.c:1484 ../gtktwitter.c:1485
+msgid "post status"
+msgstr "ステータス送信"
+
+#: ../gtktwitter.c:1496 ../gtktwitter.c:1497
+msgid "what are you doing?"
+msgstr "今なにしてる？"

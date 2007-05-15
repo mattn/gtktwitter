@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-15 18:41+0900\n"
+"POT-Creation-Date: 2007-05-15 20:07+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,24 +24,40 @@ msgstr ""
 msgid "gtktwitter"
 msgstr ""
 
-#: ../gtktwitter.c:874 ../gtktwitter.c:993
+#: ../gtktwitter.c:876 ../gtktwitter.c:995
 msgid "updating statuses..."
 msgstr ""
 
-#: ../gtktwitter.c:991
+#: ../gtktwitter.c:993
 msgid "posting status..."
 msgstr ""
 
-#: ../gtktwitter.c:1034
+#: ../gtktwitter.c:1036
 msgid "GtkTwitter Login"
 msgstr ""
 
 #. mail
-#: ../gtktwitter.c:1042
+#: ../gtktwitter.c:1044
 msgid "_Mail:"
 msgstr ""
 
 #. pass
-#: ../gtktwitter.c:1061
+#: ../gtktwitter.c:1063
 msgid "_Password:"
+msgstr ""
+
+#: ../gtktwitter.c:1460 ../gtktwitter.c:1461
+msgid "go home"
+msgstr ""
+
+#: ../gtktwitter.c:1472 ../gtktwitter.c:1473
+msgid "reload statuses"
+msgstr ""
+
+#: ../gtktwitter.c:1484 ../gtktwitter.c:1485
+msgid "post status"
+msgstr ""
+
+#: ../gtktwitter.c:1496 ../gtktwitter.c:1497
+msgid "what are you doing?"
 msgstr ""

@@ -35,7 +35,6 @@ pot:
 	$(XGETTEXT) --language=C --default-domain=$(PACKAGE) --add-comments --keyword=_ --keyword=N_ ../gtktwitter.c -o gtktwitter.pot
 
 $(LANGUAGES):
-	$(MV) $(PACKAGE).po $(PACKAGE).pot
 	$(CP) $@.po $@.po.orig
 	$(MV) $@.po $@.po.old
 	$(MSGMERGE) $@.po.old $(PACKAGE).pot -o $@.po
