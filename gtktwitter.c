@@ -1108,15 +1108,14 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 	GtkTextBuffer *buffer;
 	GtkTextIter iter;
 	GtkTextTag* name_tag;
-	//GtkTooltips* tooltips = NULL;
+	GtkTooltips* tooltips = NULL;
 	gboolean hovering = FALSE;
 	int len, n;
 
 	toplevel = gtk_widget_get_toplevel(textview);
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
 	gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(textview), &iter, x, y);
-
-	//tooltips = (GtkTooltips*)g_object_get_data(G_OBJECT(toplevel), "tooltips");
+	tooltips = (GtkTooltips*)g_object_get_data(G_OBJECT(toplevel), "tooltips");
 
 	name_tag = (GtkTextTag*)g_object_get_data(G_OBJECT(buffer), "name_tag");
 	if (gtk_text_iter_has_tag(&iter, name_tag)) {
@@ -1145,6 +1144,19 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 					GTK_TEXT_VIEW(textview),
 					GTK_TEXT_WINDOW_TEXT),
 				hovering_over_link ? hand_cursor : regular_cursor);
+		/*
+		if (hovering_over_link)
+			gtk_tooltips_set_tip(
+					GTK_TOOLTIPS(tooltips),
+					textview,
+					_("what are you doing?"),
+					_("what are you doing?"));
+		else
+			gtk_tooltips_set_tip(
+					GTK_TOOLTIPS(tooltips),
+					textview,
+					NULL, NULL);
+		*/
 	}
 }
 
@@ -1319,7 +1331,7 @@ int main(int argc, char* argv[]) {
 	GtkWidget* button = NULL;
 	GtkWidget* entry = NULL;
 	PangoFontDescription* pangoFont = NULL;
-	//GtkTooltips* tooltips = NULL;
+	GtkTooltips* tooltips = NULL;
 
 	GtkTextBuffer* buffer = NULL;
 	GtkTextTag* name_tag = NULL;
@@ -1360,9 +1372,8 @@ int main(int argc, char* argv[]) {
 	regular_cursor = gdk_cursor_new(GDK_XTERM);
 
 	/* tooltips */
-	//tooltips = gtk_tooltips_new();
-	//gtk_tooltips_disable(tooltips);
-	//tooltips = (GtkTooltips*)g_object_get_data(G_OBJECT(window), "tooltips");
+	tooltips = gtk_tooltips_new();
+	g_object_set_data(G_OBJECT(window), "tooltips", tooltips);
 
 	/* virtical container box */
 	vbox = gtk_vbox_new(FALSE, 6);
@@ -1443,6 +1454,11 @@ int main(int argc, char* argv[]) {
 	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/home.png", NULL));
 	gtk_container_add(GTK_CONTAINER(button), image);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			button,
+			_("go home"),
+			_("go home"));
 
 	/* update button */
 	button = gtk_button_new();
@@ -1450,6 +1466,11 @@ int main(int argc, char* argv[]) {
 	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/reload.png", NULL));
 	gtk_container_add(GTK_CONTAINER(button), image);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			button,
+			_("reload statuses"),
+			_("reload statuses"));
 
 	/* post button */
 	button = gtk_button_new();
@@ -1457,6 +1478,11 @@ int main(int argc, char* argv[]) {
 	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/post.png", NULL));
 	gtk_container_add(GTK_CONTAINER(button), image);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			button,
+			_("post status"),
+			_("post status"));
 
 	/* text entry */
 	entry = gtk_entry_new();
@@ -1464,6 +1490,11 @@ int main(int argc, char* argv[]) {
 	g_signal_connect(G_OBJECT(entry), "key-press-event", G_CALLBACK(on_entry_keyp_ress), window);
 	gtk_box_pack_start(GTK_BOX(toolbox), entry, FALSE, TRUE, 0);
 	//gtk_widget_set_size_request(entry, -1, 50);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			entry,
+			_("what are you doing?"),
+			_("what are you doing?"));
 
 	/* request initial window size */
 	gtk_widget_set_size_request(window, 300, 400);

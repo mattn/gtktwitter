@@ -3,6 +3,7 @@
 	make tiny url with tinyurl.com.
 	add timer for reload.
 	make be possible to browse friends timeline.
+	add tooltips.
 * version 0.0.4
 	anchor for URL links.
 	anchor for @ mark.
