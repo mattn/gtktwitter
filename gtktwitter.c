@@ -16,8 +16,8 @@
 #endif
 
 #ifdef _WIN32
-# define DATADIR "data"
-# define LOCALEDIR "share/locale"
+# define DATA_DIR "data"
+# define LOCALE_DIR "share/locale"
 # ifndef snprintf
 #  define snprintf _snprintf
 # endif
@@ -27,11 +27,11 @@
 #define APP_NAME _("gtktwitter")
 #define TWITTER_UPDATE_URL         "http://twitter.com/statuses/update.xml"
 #define TWITTER_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
-#define TWITTER_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline.xml"
+#define TWITTER_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
 #define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
 #define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
-#define RELOAD_TIMER_SPAN          600000
+#define RELOAD_TIMER_SPAN          (30*60*1000)
 
 #define GET_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
@@ -50,6 +50,9 @@ typedef struct _PROCESS_THREAD_INFO {
 	gpointer retval;
 } PROCESS_THREAD_INFO;
 
+/**
+ * timer register
+ */
 static guint timer_tag = 0;
 static void start_reload_timer(GtkWidget* toplevel);
 static void stop_reload_timer(GtkWidget* toplevel);
@@ -295,6 +298,7 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 	if (!curl) return NULL;
 	curl_easy_setopt(curl, CURLOPT_URL, api_url);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
+	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, handle_returned_header);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 	res = curl_easy_perform(curl);
 	res = res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
@@ -470,7 +474,7 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 
-	image = gtk_image_new_from_file(DATADIR"/loading.gif");
+	image = gtk_image_new_from_file(DATA_DIR"/loading.gif");
 	if (image) gtk_container_add(GTK_CONTAINER(vbox), image);
 	gtk_widget_show_all(vbox);
 
@@ -597,25 +601,28 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 			if (last != ptr)
 				gtk_text_buffer_insert(buffer, iter, last, ptr-last);
 
-			tmp = ptr + (*ptr == '@' ? 1 : 3);
+			url = tmp = ptr + (*ptr == '@' ? 1 : 3);
 			while(*tmp && strchr(ACCEPT_LETTER_NAME, *tmp)) tmp++;
-			len = (int)(tmp-ptr);
-			link = malloc(len+1);
-			memset(link, 0, len+1);
-			strncpy(link, ptr, len);
-			url = g_strdup_printf("http://twitter.com/%s", link + (*ptr == '@' ? 1 : 3));
-			tag = gtk_text_buffer_create_tag(
-					buffer,
-					NULL, 
-					"foreground",
-					"blue", 
-					"underline",
-					PANGO_UNDERLINE_SINGLE, 
-					NULL);
-			g_object_set_data(G_OBJECT(tag), "url", (gpointer)url);
-			gtk_text_buffer_insert_with_tags(buffer, iter, link, -1, tag, NULL);
-			free(link);
-			ptr = last = tmp;
+			len = (int)(tmp-url);
+			if (len) {
+				link = malloc(len+1);
+				memset(link, 0, len+1);
+				strncpy(link, url, len);
+				url = g_strdup_printf("@%s", link);
+				tag = gtk_text_buffer_create_tag(
+						buffer,
+						NULL, 
+						"foreground",
+						"blue", 
+						"underline",
+						PANGO_UNDERLINE_SINGLE, 
+						NULL);
+				g_object_set_data(G_OBJECT(tag), "url", (gpointer)url);
+				gtk_text_buffer_insert_with_tags(buffer, iter, link, -1, tag, NULL);
+				free(link);
+				ptr = last = tmp;
+			} else
+				ptr = tmp;
 		} else
 			ptr++;
 	}
@@ -635,6 +642,8 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	CURLcode res = CURLE_OK;
 	struct curl_slist *headers = NULL;
 	int status = 0;
+	gchar* user_id = NULL;
+	gchar* title = NULL;
 
 	char url[2048];
 	char auth[512];
@@ -662,7 +671,11 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	gdk_threads_leave();
 
 	memset(url, 0, sizeof(url));
-	strncpy(url, TWITTER_SELF_STATUS_URL, sizeof(url)-1);
+	user_id = g_object_get_data(G_OBJECT(window), "userid");
+	if (user_id)
+		snprintf(url, sizeof(url)-1, TWITTER_FRIENDS_STATUS_URL, user_id);
+	else
+		strncpy(url, TWITTER_SELF_STATUS_URL, sizeof(url)-1);
 	memset(auth, 0, sizeof(auth));
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
@@ -734,6 +747,13 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		goto leave;
 	}
 	nodes = path->nodesetval;
+
+	if (user_id)
+		title = g_strdup_printf("%s - %s", APP_TITLE, user_id);
+	else
+		title = g_strdup(APP_TITLE);
+	gtk_window_set_title(GTK_WINDOW(window), title);
+	g_free(title);
 
 	gdk_threads_enter();
 	buffer = (GtkTextBuffer*)g_object_get_data(G_OBJECT(window), "buffer");
@@ -818,7 +838,6 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 		text = xml_decode_alloc(text);
 		insert_status_text(buffer, &iter, text);
-		//gtk_text_buffer_insert(buffer, &iter, text, -1);
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 		gtk_text_buffer_insert_with_tags(buffer, &iter, date, -1, date_tag, NULL);
 		free(text);
@@ -855,11 +874,23 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
 		/* show error message */
-		error_dialog(widget, result);
+		error_dialog(window, result);
 		g_free(result);
 	}
 	gtk_widget_set_sensitive(toolbox, TRUE);
 	start_reload_timer(window);
+}
+
+static void update_self_status(GtkWidget* widget, gpointer user_data) {
+	GtkWidget* window = (GtkWidget*)user_data;
+	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+	gpointer user_id;
+
+	user_id = g_object_get_data(G_OBJECT(window), "userid");
+	if (user_id) g_free(user_id);
+	g_object_set_data(G_OBJECT(window), "userid", NULL);
+
+	update_friends_statuses(NULL, window);
 }
 
 /**
@@ -962,7 +993,7 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 		result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
 		/* show error message */
-		error_dialog(widget, result);
+		error_dialog(window, result);
 		g_free(result);
 	}
 	gtk_widget_set_sensitive(toolbox, TRUE);
@@ -1116,6 +1147,7 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 }
 
 static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
+	GtkWidget* toplevel;
 	GtkTextIter start, end, iter;
 	GtkTextBuffer *buffer;
 	GtkTextTag* name_tag;
@@ -1124,6 +1156,7 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	gint x, y;
 	int len, n;
 	gchar* url = NULL;
+	gchar* user_id = NULL;
 
 	if (ev->type != GDK_BUTTON_RELEASE) return FALSE;
 	event = (GdkEventButton*)ev;
@@ -1144,13 +1177,12 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	if (gtk_text_iter_has_tag(&iter, name_tag)) {
 		GtkTextIter* link_start;
 		GtkTextIter* link_end;
-		gchar* user_id;
 		link_start = gtk_text_iter_copy(&iter);
 		link_end = gtk_text_iter_copy(&iter);
 		gtk_text_iter_backward_to_tag_toggle(link_start, NULL);
 		gtk_text_iter_forward_to_tag_toggle(link_end, NULL);
 		user_id = gtk_text_buffer_get_text(buffer, link_start, link_end, TRUE);
-		url = g_strdup_printf("http://twitter.com/%s", user_id);
+		url = g_strdup_printf("@%s", user_id);
 	} else {
 		tags = gtk_text_iter_get_tags(&iter);
 		if (tags) {
@@ -1169,8 +1201,16 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 		}
 	}
 
-	if (url) {
-		GtkWidget* toplevel = gtk_widget_get_toplevel(textview);
+	if (!url) return FALSE;
+
+	toplevel = gtk_widget_get_toplevel(textview);
+	if (*url == '@') {
+		user_id = g_object_get_data(G_OBJECT(toplevel), "userid");
+		if (user_id) g_free(user_id);
+		user_id = g_strdup(url+1);
+		g_object_set_data(G_OBJECT(toplevel), "userid", user_id);
+		update_friends_statuses(NULL, toplevel);
+	} else {
 #ifdef _WIN32
 		ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOW);
 #else
@@ -1178,9 +1218,9 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 		g_spawn_command_line_async(command, NULL);
 		g_free(command);
 #endif
-		g_free(url);
 		gtk_widget_queue_draw(toplevel);
 	}
+	g_free(url);
 	return FALSE;
 }
 
@@ -1275,6 +1315,7 @@ int main(int argc, char* argv[]) {
 	GtkWidget* image = NULL;
 	GtkWidget* button = NULL;
 	GtkWidget* entry = NULL;
+	PangoFontDescription* pangoFont = NULL;
 	//GtkTooltips* tooltips = NULL;
 
 	GtkTextBuffer* buffer = NULL;
@@ -1295,7 +1336,7 @@ int main(int argc, char* argv[]) {
 	}
 #endif
 
-	bindtextdomain(APP_NAME, LOCALEDIR);
+	bindtextdomain(APP_NAME, LOCALE_DIR);
 	bind_textdomain_codeset(APP_NAME, "utf-8");
 	textdomain(APP_NAME);
 #endif
@@ -1326,7 +1367,7 @@ int main(int argc, char* argv[]) {
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 
 	/* title logo */
-	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATADIR"/twitter.png", NULL));
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/twitter.png", NULL));
 	gtk_box_pack_start(GTK_BOX(vbox), image, FALSE, TRUE, 0);
 
 	/* status viewer on scrolled window */
@@ -1337,6 +1378,13 @@ int main(int argc, char* argv[]) {
 	g_signal_connect(textview, "motion-notify-event", G_CALLBACK(textview_motion), NULL);
 	g_signal_connect(textview, "visibility-notify-event", G_CALLBACK(textview_visibility), NULL);
 	g_signal_connect(textview, "event-after", G_CALLBACK(textview_event_after), NULL);
+
+	/*
+	pangoFont = pango_font_description_new();
+	pango_font_description_set_family(pangoFont, "meiryo");
+	gtk_widget_modify_font(textview, pangoFont);
+	pango_font_description_free(pangoFont);
+	*/
 
 	swin = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(
@@ -1382,19 +1430,24 @@ int main(int argc, char* argv[]) {
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, TRUE, 0);
 	g_object_set_data(G_OBJECT(window), "toolbox", hbox);
 
+	/* home button */
+	button = gtk_button_new();
+	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(update_self_status), window);
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/home.png", NULL));
+	gtk_container_add(GTK_CONTAINER(button), image);
+	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
+
 	/* update button */
 	button = gtk_button_new();
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(update_friends_statuses), window);
-	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATADIR"/reload.png", NULL));
-	//gtk_button_set_image(GTK_BUTTON(button), image);
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/reload.png", NULL));
 	gtk_container_add(GTK_CONTAINER(button), image);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
 
 	/* post button */
 	button = gtk_button_new();
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(post_status), window);
-	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATADIR"/post.png", NULL));
-	//gtk_button_set_image(GTK_BUTTON(button), image);
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/post.png", NULL));
 	gtk_container_add(GTK_CONTAINER(button), image);
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
 
