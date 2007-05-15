@@ -62,12 +62,15 @@ update-desktop-database
 %{_bindir}/%{name}
 %{_datadir}/applications/*%{name}.desktop
 %{_datadir}/gtktwitter/logo.png
-%{_datadir}/gtktwitter/loading.gif
 %{_datadir}/gtktwitter/twitter.png
+%{_datadir}/gtktwitter/loading.gif
 %{_datadir}/gtktwitter/reload.png
+%{_datadir}/gtktwitter/home.png
 %{_datadir}/gtktwitter/post.png
 
 %changelog
+* Tue May  15 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
+- Updated version to 0.0.5
 * Mon May  07 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
 - Updated version to 0.0.4
 * Thu May  03 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>

@@ -33,10 +33,10 @@
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 #define RELOAD_TIMER_SPAN          (30*60*1000)
 
-#define GET_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
+#define XML_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
-static GdkCursor *hand_cursor = NULL;
-static GdkCursor *regular_cursor = NULL;
+static GdkCursor* hand_cursor = NULL;
+static GdkCursor* regular_cursor = NULL;
 
 typedef struct _PIXBUF_CACHE {
 	char* id;
@@ -609,6 +609,7 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 				memset(link, 0, len+1);
 				strncpy(link, url, len);
 				url = g_strdup_printf("@%s", link);
+				free(link);
 				tag = gtk_text_buffer_create_tag(
 						buffer,
 						NULL, 
@@ -618,8 +619,7 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 						PANGO_UNDERLINE_SINGLE, 
 						NULL);
 				g_object_set_data(G_OBJECT(tag), "url", (gpointer)url);
-				gtk_text_buffer_insert_with_tags(buffer, iter, link, -1, tag, NULL);
-				free(link);
+				gtk_text_buffer_insert_with_tags(buffer, iter, url, -1, tag, NULL);
 				ptr = last = tmp;
 			} else
 				ptr = tmp;
@@ -793,11 +793,11 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 			if (!strcmp("user", (char*)status->name)) {
 				xmlNodePtr user = status->children;
 				while(user) {
-					if (!strcmp("id", (char*)user->name)) id = GET_CONTENT(user);
-					if (!strcmp("name", (char*)user->name)) real = GET_CONTENT(user);
-					if (!strcmp("screen_name", (char*)user->name)) name = GET_CONTENT(user);
-					if (!strcmp("profile_image_url", (char*)user->name)) icon = GET_CONTENT(user);
-					if (!strcmp("description", (char*)user->name)) desc = GET_CONTENT(user);
+					if (!strcmp("id", (char*)user->name)) id = XML_CONTENT(user);
+					if (!strcmp("name", (char*)user->name)) real = XML_CONTENT(user);
+					if (!strcmp("screen_name", (char*)user->name)) name = XML_CONTENT(user);
+					if (!strcmp("profile_image_url", (char*)user->name)) icon = XML_CONTENT(user);
+					if (!strcmp("description", (char*)user->name)) desc = XML_CONTENT(user);
 					user = user->next;
 				}
 			}
