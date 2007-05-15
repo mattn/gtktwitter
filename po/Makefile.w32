@@ -1,0 +1,50 @@
+
+LANGUAGES = \
+		ja
+
+MOFILES = \
+		ja.mo
+
+PACKAGE = gtktwitter
+
+# Correct the following line for the installation directory of gettext
+
+MSGFMT = msgfmt
+XGETTEXT = xgettext
+MSGMERGE = msgmerge
+
+MV = move
+CP = copy
+RM = del
+MKD = mkdir
+LS = dir
+
+LSFLAGS = /b /on /l /s
+
+INSTALLDIR = $(LOCALE_DIR)/$(LANGUAGE)/LC_MESSAGES
+
+.SUFFIXES:
+.SUFFIXES: .po .mo .pot
+
+.po.mo:
+	$(MSGFMT) -o $@ $<
+
+all: $(MOFILES)
+
+pot:
+	$(XGETTEXT) --language=C --default-domain=$(PACKAGE) --add-comments --keyword=_ --keyword=N_ ../gtktwitter.c -o gtktwitter.pot
+
+$(LANGUAGES):
+	$(MV) $(PACKAGE).po $(PACKAGE).pot
+	$(CP) $@.po $@.po.orig
+	$(MV) $@.po $@.po.old
+	$(MSGMERGE) $@.po.old $(PACKAGE).pot -o $@.po
+	$(RM) $@.po.old
+
+install:
+	if not exist $(INSTALLDIR) $(MKD) $(INSTALLDIR)
+	$(CP) $(LANGUAGE).mo $(INSTALLDIR)\$(PACKAGE).mo
+
+clean:
+	$(RM) *.mo
+	$(RM) *.pot
