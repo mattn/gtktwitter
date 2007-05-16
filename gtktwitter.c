@@ -426,7 +426,7 @@ static gpointer process_thread(gpointer data) {
 }
 
 static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent, const gchar* message) {
-	GtkWidget* window = gtk_window_new(GTK_WINDOW_POPUP);
+	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	GtkWidget* vbox;
 	GtkWidget* image;
 	GdkColor color;
@@ -438,6 +438,7 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	if (parent)
 		parent = gtk_widget_get_toplevel(parent);
 
+	gtk_window_set_modal(GTK_WINDOW(window), TRUE);
 	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER_ON_PARENT);
 	gtk_widget_hide_on_delete(window);
 
@@ -447,7 +448,6 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 
 	image = gtk_image_new_from_file(DATA_DIR"/loading.gif");
 	if (image) gtk_container_add(GTK_CONTAINER(vbox), image);
-	gtk_widget_show_all(vbox);
 
 	if (message) {
 		GtkWidget* label = gtk_label_new(message);
@@ -465,13 +465,11 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 		gtk_window_set_transient_for(
 				GTK_WINDOW(window),
 				GTK_WINDOW(parent));
+		gdk_window_set_cursor(parent->window, cursor);
 	}
 
 	gtk_widget_show_all(window);
 
-	if (parent) {
-		gdk_window_set_cursor(parent->window, cursor);
-	}
 	gdk_window_set_cursor(window->window, cursor);
 	gdk_flush();
 	gdk_cursor_destroy(cursor);
