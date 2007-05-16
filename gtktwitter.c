@@ -65,6 +65,8 @@ static char* response_cond = NULL;	/* response condition */
 static char* response_mime = NULL;	/* response content-type. ex: "text/html" */
 static char* response_data = NULL;	/* response data from server. */
 static size_t response_size = 0;	/* response size of data */
+static char last_condition[256] = {0};
+static int is_processing = FALSE;
 
 static initialize_http_response() {
 	response_cond = NULL;
@@ -107,93 +109,62 @@ static time_t strtotime(char *s) {
 	os = s;
 	/* Sunday, */
 	for(i = 0; i < sizeof(wday)/sizeof(wday[0]); i++) {
-		if(strncmp(s, wday[i], strlen(wday[i])) == 0){
+		if (strncmp(s, wday[i], strlen(wday[i])) == 0) {
 			s += strlen(wday[i]);
 			break;
 		}
-		if(strncmp(s, wday[i], 3) == 0){
+		if (strncmp(s, wday[i], 3) == 0) {
 			s += 3;
 			break;
 		}
 	}
-	if (i == sizeof(wday)/sizeof(wday[0])){
-		return -1;
-	}
-	if (*s++ != ',' || *s++ != ' ') {
-		return -1;
-	}
+	if (i == sizeof(wday)/sizeof(wday[0])) return -1;
+	if (*s++ != ',' || *s++ != ' ') return -1;
 
 	/* 25- */
-	if(!isdigit(s[0]) || !isdigit(s[1]) || (s[2]!='-' && s[2]!=' ')){
-		return -1;
-	}
+	if (!isdigit(s[0]) || !isdigit(s[1]) || (s[2]!='-' && s[2]!=' ')) return -1;
 	tm.tm_mday = strtol(s, 0, 10);
 	s += 3;
 
 	/* Jan- */
 	for(i = 0; i<sizeof(mon)/sizeof(mon[0]); i++) {
-		if(strncmp(s, mon[i], 3) == 0){
+		if (strncmp(s, mon[i], 3) == 0) {
 			tm.tm_mon = i;
 			s += 3;
 			break;
 		}
 	}
-	if(i == sizeof(mon)/sizeof(mon[0])){
-		return -1;
-	}
-	if(s[0] != '-' && s[0] != ' '){
-		return -1;
-	}
+	if (i == sizeof(mon)/sizeof(mon[0])) return -1;
+	if (s[0] != '-' && s[0] != ' ') return -1;
 	s++;
 
 	/* 2002 */
-	if(!isdigit(s[0]) || !isdigit(s[1])){
-		return -1;
-	}
+	if (!isdigit(s[0]) || !isdigit(s[1])) return -1;
 	tm.tm_year = strtol(s, 0, 10);
 	s += 2;
-	if(isdigit(s[0]) && isdigit(s[1]))
+	if (isdigit(s[0]) && isdigit(s[1]))
 		s += 2;
-	else{
-		if(tm.tm_year <= 68)
-			tm.tm_year += 2000;
-		else
-			tm.tm_year += 1900;
+	else {
+		tm.tm_year += (tm.tm_year <= 68) ? 2000 : 1900;
 	}
-	isleap = tm.tm_year%4==0 && (tm.tm_year%100!=0 || tm.tm_year%400==0);
-	if(tm.tm_mday==0 || tm.tm_mday > mday[isleap][tm.tm_mon]){
-		return -1;
-	}
+	isleap = (tm.tm_year % 4 == 0)
+		&& (tm.tm_year % 100 != 0 || tm.tm_year % 400 == 0);
+	if (tm.tm_mday == 0 || tm.tm_mday > mday[isleap][tm.tm_mon]) return -1;
 	tm.tm_year -= 1900;
-	if(*s++ != ' '){
-		return -1;
-	}
+	if (*s++ != ' ') return -1;
 
-	if(!isdigit(s[0]) || !isdigit(s[1]) || s[2]!=':'
-	|| !isdigit(s[3]) || !isdigit(s[4]) || s[5]!=':'
-	|| !isdigit(s[6]) || !isdigit(s[7]) || s[8]!=' '){
-		return -1;
-	}
+	if (!isdigit(s[0]) || !isdigit(s[1]) || s[2]!=':'
+	 || !isdigit(s[3]) || !isdigit(s[4]) || s[5]!=':'
+	 || !isdigit(s[6]) || !isdigit(s[7]) || s[8]!=' ') return -1;
 
 	tm.tm_hour = atoi(s);
 	tm.tm_min = atoi(s+3);
 	tm.tm_sec = atoi(s+6);
-	if(tm.tm_hour >= 24 || tm.tm_min >= 60 || tm.tm_sec >= 60){
-		return -1;
-	}
+	if (tm.tm_hour >= 24 || tm.tm_min >= 60 || tm.tm_sec >= 60) return -1;
 	s += 9;
 
-	if(strncmp(s, "GMT", 3) != 0){
-		return -1;
-	}
+	if (strncmp(s, "GMT", 3) != 0) return -1;
 	tm.tm_yday = 0;
-	/*
-	{
-		time_t gmc = mktime(&tm)-900;
-		struct tm* gmt = gmtime(&gmc);
-		memcpy(&tm, gmt, sizeof(tm));
-	}
-	*/
 	return mktime(&tm);
 }
 
@@ -653,7 +624,6 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	int n;
 	int length;
 	gpointer result_str = NULL;
-	static char last_condition[256] = {0};
 
 	xmlDocPtr doc = NULL;
 	xmlNodeSetPtr nodes = NULL;
@@ -715,6 +685,12 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 			free(message);
 		} else
 			result_str = g_strdup("unknown server response");
+		if (status == 401) {
+			if (mail) free(mail);
+			if (pass) free(pass);
+			g_object_set_data(G_OBJECT(window), "mail", NULL);
+			g_object_set_data(G_OBJECT(window), "pass", NULL);
+		}
 		goto leave;
 	}
 	if (response_cond) {
@@ -782,7 +758,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 
 		/* status nodes */
 		xmlNodePtr status = nodes->nodeTab[n];
-		if(status->type != XML_ATTRIBUTE_NODE && status->type != XML_ELEMENT_NODE && status->type != XML_CDATA_SECTION_NODE) continue;
+		if (status->type != XML_ATTRIBUTE_NODE && status->type != XML_ELEMENT_NODE && status->type != XML_CDATA_SECTION_NODE) continue;
 		status = status->children;
 		while(status) {
 			if (!strcmp("created_at", (char*)status->name)) date = (char*)status->children->content;
@@ -871,6 +847,12 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
 	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
 
+	if (!mail || !pass) {
+		if (!login_dialog(window)) return;
+	}
+
+	is_processing = TRUE;
+
 	stop_reload_timer(window);
 	gtk_widget_set_sensitive(toolbox, FALSE);
 	result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
@@ -881,6 +863,8 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	}
 	gtk_widget_set_sensitive(toolbox, TRUE);
 	start_reload_timer(window);
+
+	is_processing = FALSE;
 }
 
 static void update_self_status(GtkWidget* widget, gpointer user_data) {
@@ -989,16 +973,29 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
+	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
+	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
+
+	if (!mail || !pass) {
+		if (!login_dialog(window)) return;
+	}
+
+	is_processing = TRUE;
+
 	gtk_widget_set_sensitive(toolbox, FALSE);
 	result = process_func(post_status_thread, window, window, _("posting status..."));
-	if (!result)
+	if (!result) {
+		last_condition[0] = 0;
 		result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
+	}
 	if (result) {
 		/* show error message */
 		error_dialog(window, result);
 		g_free(result);
 	}
 	gtk_widget_set_sensitive(toolbox, TRUE);
+
+	is_processing = FALSE;
 }
 
 /**
@@ -1006,6 +1003,8 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
  */
 static gboolean on_entry_keyp_ress(GtkWidget *widget, GdkEventKey* event, gpointer user_data) {
 	char* message = (char*)gtk_entry_get_text(GTK_ENTRY(widget));
+
+	if (is_processing) return FALSE;
 
 	if (!message || strlen(message) == 0) return FALSE;
 	if (event->keyval == GDK_Return)
@@ -1094,6 +1093,7 @@ static gboolean login_dialog(GtkWidget* window) {
 		char* pass_text = (char*)gtk_entry_get_text(GTK_ENTRY(pass));
 		g_object_set_data(G_OBJECT(window), "mail", strdup(mail_text));
 		g_object_set_data(G_OBJECT(window), "pass", strdup(pass_text));
+		save_config(window);
 		ret = TRUE;
 	}
 
@@ -1215,11 +1215,13 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 
 	toplevel = gtk_widget_get_toplevel(textview);
 	if (*url == '@') {
-		user_id = g_object_get_data(G_OBJECT(toplevel), "userid");
-		if (user_id) g_free(user_id);
-		user_id = g_strdup(url+1);
-		g_object_set_data(G_OBJECT(toplevel), "userid", user_id);
-		update_friends_statuses(NULL, toplevel);
+		if (!is_processing) {
+			user_id = g_object_get_data(G_OBJECT(toplevel), "userid");
+			if (user_id) g_free(user_id);
+			user_id = g_strdup(url+1);
+			g_object_set_data(G_OBJECT(toplevel), "userid", user_id);
+			update_friends_statuses(NULL, toplevel);
+		}
 	} else {
 #ifdef _WIN32
 		ShellExecute(NULL, "open", url, NULL, NULL, SW_SHOW);
@@ -1310,6 +1312,49 @@ static void start_reload_timer(GtkWidget* toplevel) {
 static void reset_reload_timer(GtkWidget* toplevel) {
 	stop_reload_timer(toplevel);
 	start_reload_timer(toplevel);
+}
+
+/**
+ * configuration
+ */
+static int load_config(GtkWidget* window) {
+	char* mail = NULL;
+	char* pass = NULL;
+	const gchar* confdir = g_get_user_config_dir();
+	gchar* conffile = g_build_filename(confdir, APP_NAME, "config", NULL);
+	char buf[BUFSIZ];
+	FILE *fp = fopen(conffile, "r");
+	g_free(conffile);
+	if (!fp) return -1;
+	while(fgets(buf, sizeof(buf), fp)) {
+		gchar* line = g_strchomp(buf);
+		if (!strncmp(line, "mail=", 5))
+			g_object_set_data(G_OBJECT(window), "mail", g_strdup(line+5));
+		if (!strncmp(line, "pass=", 5))
+			g_object_set_data(G_OBJECT(window), "pass", g_strdup(line+5));
+	}
+	fclose(fp);
+	return 0;
+}
+
+static int save_config(GtkWidget* window) {
+	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
+	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
+	gchar* confdir = (gchar*)g_get_user_config_dir();
+	gchar* conffile = NULL;
+	FILE* fp = NULL;
+
+	confdir = g_build_path(G_DIR_SEPARATOR_S, confdir, APP_NAME, NULL);
+	g_mkdir_with_parents(confdir, 644);
+	conffile = g_build_filename(confdir, "config", NULL);
+	g_free(confdir);
+	fp = fopen(conffile, "w");
+	g_free(conffile);
+	if (!fp) return -1;
+	fprintf(fp, "mail=%s\n", mail ? mail : "");
+	fprintf(fp, "pass=%s\n", pass ? pass : "");
+	fclose(fp);
+	return 0;
 }
 
 /**
@@ -1497,11 +1542,9 @@ int main(int argc, char* argv[]) {
 	gtk_widget_show_all(vbox);
 	gtk_widget_show(window);
 
-	/* show login dialog, and update friends statuses */
-	if (login_dialog(window)) {
-		update_friends_statuses(window, window);
-		gtk_main();
-	}
+	load_config(window);
+	update_friends_statuses(window, window);
+	gtk_main();
 
 	gdk_threads_leave();
 
