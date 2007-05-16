@@ -271,6 +271,7 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
 	curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, handle_returned_header);
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 	res = curl_easy_perform(curl);
 	res = res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
@@ -393,6 +394,7 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
 		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, handle_returned_header);
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 		if (res == CURLE_OK) {
@@ -661,13 +663,14 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 	}
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 	res = curl_easy_perform(curl);
 	res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
 	if (headers) curl_slist_free_all(headers);
 
 	if (status == 0) {
-		result_str = g_strdup("no server response");
+		result_str = g_strdup(_("no server response"));
 		goto leave;
 	}
 	recv_data = malloc(response_size+1);
@@ -675,14 +678,18 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	memcpy(recv_data, response_data, response_size);
 	if (status == 304)
 		goto leave;
-	if (status != 200 || (response_mime && strcmp(response_mime, "application/xml"))) {
+	if (response_mime && strcmp(response_mime, "application/xml")) {
+		result_str = g_strdup(_("unknown server response"));
+		goto leave;
+	}
+	if (status != 200) {
 		/* failed to get xml */
 		if (response_data) {
 			char* message = xml_decode_alloc(recv_data);
 			result_str = g_strdup(message);
 			free(message);
 		} else
-			result_str = g_strdup("unknown server response");
+			result_str = g_strdup(_("unknown server response"));
 		if (status == 401) {
 			if (mail) free(mail);
 			if (pass) free(pass);
@@ -705,19 +712,19 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		if (recv_data)
 			result_str = g_strdup(recv_data);
 		else
-			result_str = g_strdup("unknown server response");
+			result_str = g_strdup(_("unknown server response"));
 		goto leave;
 	}
 
 	/* create xpath query */
 	ctx = xmlXPathNewContext(doc);
 	if (!ctx) {
-		result_str = g_strdup("unknown server response");
+		result_str = g_strdup(_("unknown server response"));
 		goto leave;
 	}
 	path = xmlXPathEvalExpression((xmlChar*)"/statuses/status", ctx);
 	if (!path) {
-		result_str = g_strdup("unknown server response");
+		result_str = g_strdup(_("unknown server response"));
 		goto leave;
 	}
 	nodes = path->nodesetval;
@@ -931,6 +938,7 @@ static gpointer post_status_thread(gpointer data) {
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
 	curl_easy_setopt(curl, CURLOPT_POST, 1);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 	res = curl_easy_perform(curl);
 	res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
@@ -946,7 +954,7 @@ static gpointer post_status_thread(gpointer data) {
 			result_str = g_strdup(message);
 			free(message);
 		} else
-			result_str = g_strdup("unknown server response");
+			result_str = g_strdup(_("unknown server response"));
 		goto leave;
 	} else {
 		/* succeeded to the post */

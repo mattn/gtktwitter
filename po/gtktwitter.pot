@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-15 20:07+0900\n"
+"POT-Creation-Date: 2007-05-16 20:32+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -24,40 +24,49 @@ msgstr ""
 msgid "gtktwitter"
 msgstr ""
 
-#: ../gtktwitter.c:876 ../gtktwitter.c:995
+#: ../gtktwitter.c:670
+msgid "no server response"
+msgstr ""
+
+#: ../gtktwitter.c:679 ../gtktwitter.c:689 ../gtktwitter.c:712
+#: ../gtktwitter.c:719 ../gtktwitter.c:724 ../gtktwitter.c:953
+msgid "unknown server response"
+msgstr ""
+
+#: ../gtktwitter.c:860 ../gtktwitter.c:991
 msgid "updating statuses..."
 msgstr ""
 
-#: ../gtktwitter.c:993
+#: ../gtktwitter.c:988
 msgid "posting status..."
 msgstr ""
 
-#: ../gtktwitter.c:1036
+#: ../gtktwitter.c:1037
 msgid "GtkTwitter Login"
 msgstr ""
 
 #. mail
-#: ../gtktwitter.c:1044
+#: ../gtktwitter.c:1045
 msgid "_Mail:"
 msgstr ""
 
 #. pass
-#: ../gtktwitter.c:1063
+#: ../gtktwitter.c:1064
 msgid "_Password:"
 msgstr ""
 
-#: ../gtktwitter.c:1460 ../gtktwitter.c:1461
+#: ../gtktwitter.c:1503 ../gtktwitter.c:1504
 msgid "go home"
 msgstr ""
 
-#: ../gtktwitter.c:1472 ../gtktwitter.c:1473
+#: ../gtktwitter.c:1515 ../gtktwitter.c:1516
 msgid "reload statuses"
 msgstr ""
 
-#: ../gtktwitter.c:1484 ../gtktwitter.c:1485
+#: ../gtktwitter.c:1527 ../gtktwitter.c:1528
 msgid "post status"
 msgstr ""
 
-#: ../gtktwitter.c:1496 ../gtktwitter.c:1497
+#: ../gtktwitter.c:1539 ../gtktwitter.c:1540
 msgid "what are you doing?"
 msgstr ""

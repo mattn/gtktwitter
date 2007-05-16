@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.0.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-15 20:07+0900\n"
+"POT-Creation-Date: 2007-05-16 20:32+0900\n"
 "PO-Revision-Date: 2007-05-15 20:07+0900\n"
 "Last-Translator: mattn <mattn.jp at gmail.com>\n"
 "Language-Team: mattn <mattn.jp at gmail.com>\n"
@@ -23,40 +23,49 @@ msgstr "GtkTwitter"
 msgid "gtktwitter"
 msgstr "gtktwitter"
 
-#: ../gtktwitter.c:876 ../gtktwitter.c:995
+#: ../gtktwitter.c:670
+msgid "no server response"
+msgstr "サーバからの応答がありません"
+
+#: ../gtktwitter.c:679 ../gtktwitter.c:689 ../gtktwitter.c:712
+#: ../gtktwitter.c:719 ../gtktwitter.c:724 ../gtktwitter.c:953
+msgid "unknown server response"
+msgstr "サーバからの応答が不正です"
+
+#: ../gtktwitter.c:860 ../gtktwitter.c:991
 msgid "updating statuses..."
 msgstr "ステータス更新中..."
 
-#: ../gtktwitter.c:993
+#: ../gtktwitter.c:988
 msgid "posting status..."
 msgstr "ステータス送信中..."
 
-#: ../gtktwitter.c:1036
+#: ../gtktwitter.c:1037
 msgid "GtkTwitter Login"
 msgstr "GtkTwitter ログイン"
 
 #. mail
-#: ../gtktwitter.c:1044
+#: ../gtktwitter.c:1045
 msgid "_Mail:"
 msgstr "メール(_M):"
 
 #. pass
-#: ../gtktwitter.c:1063
+#: ../gtktwitter.c:1064
 msgid "_Password:"
 msgstr "パスワード(_P):"
 
-#: ../gtktwitter.c:1460 ../gtktwitter.c:1461
+#: ../gtktwitter.c:1503 ../gtktwitter.c:1504
 msgid "go home"
 msgstr "ホーム"
 
-#: ../gtktwitter.c:1472 ../gtktwitter.c:1473
+#: ../gtktwitter.c:1515 ../gtktwitter.c:1516
 msgid "reload statuses"
 msgstr "リロード"
 
-#: ../gtktwitter.c:1484 ../gtktwitter.c:1485
+#: ../gtktwitter.c:1527 ../gtktwitter.c:1528
 msgid "post status"
 msgstr "ステータス送信"
 
-#: ../gtktwitter.c:1496 ../gtktwitter.c:1497
+#: ../gtktwitter.c:1539 ../gtktwitter.c:1540
 msgid "what are you doing?"
 msgstr "今なにしてる？"
