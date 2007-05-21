@@ -1,3 +1,5 @@
+* version 0.0.6
+	supported load/save configs.
 * version 0.0.5
 	supported ETag and If-Modified-Since.
 	make tiny url with tinyurl.com.

@@ -2,10 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(gtktwitter.c, 0.0.5, mattn.jp@gmail.com)
+AC_INIT(gtktwitter.c, 0.0.6, mattn.jp@gmail.com)
 AC_CONFIG_SRCDIR([gtktwitter.c])
 AM_CONFIG_HEADER([config.h])
-AM_INIT_AUTOMAKE(gtktwitter, 0.0.5, no-define) 
+AM_INIT_AUTOMAKE(gtktwitter, 0.0.6, no-define) 
 
 # Checks for programs.
 AC_PROG_CC
