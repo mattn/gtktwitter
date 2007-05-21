@@ -1355,7 +1355,7 @@ static int save_config(GtkWidget* window) {
 	FILE* fp = NULL;
 
 	confdir = g_build_path(G_DIR_SEPARATOR_S, confdir, APP_NAME, NULL);
-	g_mkdir_with_parents(confdir, 644);
+	g_mkdir_with_parents(confdir, 0700);
 	conffile = g_build_filename(confdir, "config", NULL);
 	g_free(confdir);
 	fp = fopen(conffile, "w");
