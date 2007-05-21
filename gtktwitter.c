@@ -58,6 +58,10 @@ static void start_reload_timer(GtkWidget* toplevel);
 static void stop_reload_timer(GtkWidget* toplevel);
 static void reset_reload_timer(GtkWidget* toplevel);
 
+static gboolean login_dialog(GtkWidget* window);
+static int load_config(GtkWidget* window);
+static int save_config(GtkWidget* window);
+
 /**
  * curl callback
  */
