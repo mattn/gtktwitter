@@ -28,10 +28,13 @@
 #define TWITTER_UPDATE_URL         "http://twitter.com/statuses/update.xml"
 #define TWITTER_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
 #define TWITTER_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
+#define TWITTER_THREAD_STATUS_URL  "http://twitter.com/statuses/thread_timeline/%s.xml"
 #define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
 #define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+#define ACCEPT_LETTER_REPLY        "1234567890"
 #define RELOAD_TIMER_SPAN          (30*60*1000)
+#define USE_REPLAY_ACCESS          0
 
 #define XML_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
@@ -572,18 +575,58 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 			char* link;
 			char* tmp;
 			gchar* url;
+			gchar* user_id;
+			gchar* user_name;
 
 			if (last != ptr)
 				gtk_text_buffer_insert(buffer, iter, last, ptr-last);
 
-			url = tmp = ptr + (*ptr == '@' ? 1 : 3);
+			user_name = tmp = ptr + (*ptr == '@' ? 1 : 3);
 			while(*tmp && strchr(ACCEPT_LETTER_NAME, *tmp)) tmp++;
+			len = (int)(tmp-user_name);
+			if (len) {
+				link = malloc(len+1);
+				memset(link, 0, len+1);
+				strncpy(link, user_name, len);
+				url = g_strdup_printf("@%s", link);
+				user_id = g_strdup(link);
+				user_name = g_strdup(link);
+				free(link);
+				tag = gtk_text_buffer_create_tag(
+						buffer,
+						NULL, 
+						"foreground",
+						"blue", 
+						"underline",
+						PANGO_UNDERLINE_SINGLE, 
+						NULL);
+				g_object_set_data(G_OBJECT(tag), "user_id", (gpointer)user_id);
+				g_object_set_data(G_OBJECT(tag), "user_name", (gpointer)user_name);
+				gtk_text_buffer_insert_with_tags(buffer, iter, url, -1, tag, NULL);
+				g_free(url);
+				ptr = last = tmp;
+			} else
+				ptr = tmp;
+		} else
+#ifdef USE_REPLAY_ACCESS
+		if (!strncmp(ptr, ">>", 2)) {
+			GtkTextTag *tag;
+			int len;
+			char* link;
+			char* tmp;
+			gchar* url;
+
+			if (last != ptr)
+				gtk_text_buffer_insert(buffer, iter, last, ptr-last);
+
+			url = tmp = ptr + 2;
+			while(*tmp && strchr(ACCEPT_LETTER_REPLY, *tmp)) tmp++;
 			len = (int)(tmp-url);
 			if (len) {
 				link = malloc(len+1);
 				memset(link, 0, len+1);
 				strncpy(link, url, len);
-				url = g_strdup_printf("@%s", link);
+				url = g_strdup_printf(">>%s", link);
 				free(link);
 				tag = gtk_text_buffer_create_tag(
 						buffer,
@@ -599,6 +642,7 @@ static void insert_status_text(GtkTextBuffer* buffer, GtkTextIter* iter, const c
 			} else
 				ptr = tmp;
 		} else
+#endif
 			ptr++;
 	}
 	if (last != ptr)
@@ -618,6 +662,8 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	struct curl_slist *headers = NULL;
 	int status = 0;
 	gchar* user_id = NULL;
+	gchar* user_name = NULL;
+	gchar* status_id = NULL;
 	gchar* title = NULL;
 
 	char url[2048];
@@ -645,7 +691,16 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	gdk_threads_leave();
 
 	memset(url, 0, sizeof(url));
-	user_id = g_object_get_data(G_OBJECT(window), "userid");
+	user_id = g_object_get_data(G_OBJECT(window), "user_id");
+	user_name = g_object_get_data(G_OBJECT(window), "user_name");
+	status_id = g_object_get_data(G_OBJECT(window), "status_id");
+	if (status_id) {
+		snprintf(url, sizeof(url)-1, TWITTER_THREAD_STATUS_URL, status_id);
+		/* status_id is temporary value */
+		free(status_id);
+		g_object_set_data(G_OBJECT(window), "status_id", NULL);
+	}
+	else
 	if (user_id)
 		snprintf(url, sizeof(url)-1, TWITTER_FRIENDS_STATUS_URL, user_id);
 	else
@@ -733,8 +788,11 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	}
 	nodes = path->nodesetval;
 
+	if (user_name)
+		title = g_strdup_printf("%s - %s", APP_TITLE, user_name);
+	else
 	if (user_id)
-		title = g_strdup_printf("%s - %s", APP_TITLE, user_id);
+		title = g_strdup_printf("%s - (%s)", APP_TITLE, user_id);
 	else
 		title = g_strdup(APP_TITLE);
 	gtk_window_set_title(GTK_WINDOW(window), title);
@@ -742,7 +800,6 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 
 	gdk_threads_enter();
 	buffer = (GtkTextBuffer*)g_object_get_data(G_OBJECT(window), "buffer");
-	name_tag = (GtkTextTag*)g_object_get_data(G_OBJECT(buffer), "name_tag");
 	date_tag = (GtkTextTag*)g_object_get_data(G_OBJECT(buffer), "date_tag");
 	gtk_text_buffer_set_text(buffer, "", 0);
 	gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
@@ -781,7 +838,11 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 					if (!strcmp("id", (char*)user->name)) id = XML_CONTENT(user);
 					if (!strcmp("name", (char*)user->name)) real = XML_CONTENT(user);
 					if (!strcmp("screen_name", (char*)user->name)) name = XML_CONTENT(user);
-					if (!strcmp("profile_image_url", (char*)user->name)) icon = XML_CONTENT(user);
+					if (!strcmp("profile_image_url", (char*)user->name)) {
+						icon = XML_CONTENT(user);
+						icon = (char*)g_strchomp((gchar*)icon);
+						icon = (char*)g_strchug((gchar*)icon);
+					}
 					if (!strcmp("description", (char*)user->name)) desc = XML_CONTENT(user);
 					user = user->next;
 				}
@@ -804,7 +865,6 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 			if (pixbuf) {
 				pixbuf_cache[cache].id = id;
 				pixbuf_cache[cache].pixbuf = pixbuf;
-				if (desc) g_object_set_data(G_OBJECT(pixbuf), "description", g_strdup(desc));
 			}
 		}
 
@@ -819,6 +879,21 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		gdk_threads_enter();
 		if (pixbuf) gtk_text_buffer_insert_pixbuf(buffer, &iter, pixbuf);
 		gtk_text_buffer_insert(buffer, &iter, " ", -1);
+		name_tag = gtk_text_buffer_create_tag(
+				buffer,
+				NULL,
+				"scale",
+				PANGO_SCALE_LARGE,
+				"underline",
+				PANGO_UNDERLINE_SINGLE,
+				"weight",
+				PANGO_WEIGHT_BOLD,
+				"foreground",
+				"#0000FF",
+				NULL);
+		g_object_set_data(G_OBJECT(name_tag), "user_id", g_strdup(id));
+		g_object_set_data(G_OBJECT(name_tag), "user_name", g_strdup(name));
+		g_object_set_data(G_OBJECT(name_tag), "user_description", g_strdup(desc));
 		gtk_text_buffer_insert_with_tags(buffer, &iter, name, -1, name_tag, NULL);
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
 		text = xml_decode_alloc(text);
@@ -879,11 +954,14 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 static void update_self_status(GtkWidget* widget, gpointer user_data) {
 	GtkWidget* window = (GtkWidget*)user_data;
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
-	gpointer user_id;
+	gchar* old_data;
 
-	user_id = g_object_get_data(G_OBJECT(window), "userid");
-	if (user_id) g_free(user_id);
-	g_object_set_data(G_OBJECT(window), "userid", NULL);
+	old_data = g_object_get_data(G_OBJECT(window), "user_id");
+	if (old_data) g_free(old_data);
+	g_object_set_data(G_OBJECT(window), "user_id", NULL);
+	old_data = g_object_get_data(G_OBJECT(window), "user_name");
+	if (old_data) g_free(old_data);
+	g_object_set_data(G_OBJECT(window), "user_name", NULL);
 
 	update_friends_statuses(NULL, window);
 }
@@ -1117,7 +1195,6 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 	GtkWidget* toplevel;
 	GtkTextBuffer *buffer;
 	GtkTextIter iter;
-	GtkTextTag* name_tag;
 	GtkTooltips* tooltips = NULL;
 	gboolean hovering = FALSE;
 	int len, n;
@@ -1127,25 +1204,26 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 	gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(textview), &iter, x, y);
 	tooltips = (GtkTooltips*)g_object_get_data(G_OBJECT(toplevel), "tooltips");
 
-	name_tag = (GtkTextTag*)g_object_get_data(G_OBJECT(buffer), "name_tag");
-	if (gtk_text_iter_has_tag(&iter, name_tag)) {
-		hovering = TRUE;
-	} else {
-		tags = gtk_text_iter_get_tags(&iter);
-		if (tags) {
-			len = g_slist_length(tags);
-			for(n = 0; n < len; n++) {
-				GtkTextTag* tag = (GtkTextTag*)g_slist_nth_data(tags, n);
-				if (tag) {
-					gpointer url = g_object_get_data(G_OBJECT(tag), "url");
-					if (url) {
-						hovering = TRUE;
-						break;
-					}
+	tags = gtk_text_iter_get_tags(&iter);
+	if (tags) {
+		len = g_slist_length(tags);
+		for(n = 0; n < len; n++) {
+			GtkTextTag* tag = (GtkTextTag*)g_slist_nth_data(tags, n);
+			if (tag) {
+				gpointer url;
+				url = g_object_get_data(G_OBJECT(tag), "url");
+				if (url) {
+					hovering = TRUE;
+					break;
+				}
+				url = g_object_get_data(G_OBJECT(tag), "user_id");
+				if (url) {
+					hovering = TRUE;
+					break;
 				}
 			}
-			g_slist_free(tags);
 		}
+		g_slist_free(tags);
 	}
 	if (hovering != hovering_over_link) {
 		char* message = NULL;
@@ -1170,13 +1248,13 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	GtkWidget* toplevel;
 	GtkTextIter start, end, iter;
 	GtkTextBuffer *buffer;
-	GtkTextTag* name_tag;
 	GdkEventButton *event;
 	GSList *tags = NULL;
 	gint x, y;
 	int len, n;
 	gchar* url = NULL;
 	gchar* user_id = NULL;
+	gchar* user_name = NULL;
 
 	if (ev->type != GDK_BUTTON_RELEASE) return FALSE;
 	event = (GdkEventButton*)ev;
@@ -1193,32 +1271,28 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 			(gint)event->x, (gint)event->y, &x, &y);
 	gtk_text_view_get_iter_at_location(GTK_TEXT_VIEW(textview), &iter, x, y);
 
-	name_tag = (GtkTextTag*)g_object_get_data(G_OBJECT(buffer), "name_tag");
-	if (gtk_text_iter_has_tag(&iter, name_tag)) {
-		GtkTextIter* link_start;
-		GtkTextIter* link_end;
-		link_start = gtk_text_iter_copy(&iter);
-		link_end = gtk_text_iter_copy(&iter);
-		gtk_text_iter_backward_to_tag_toggle(link_start, NULL);
-		gtk_text_iter_forward_to_tag_toggle(link_end, NULL);
-		user_id = gtk_text_buffer_get_text(buffer, link_start, link_end, TRUE);
-		url = g_strdup_printf("@%s", user_id);
-	} else {
-		tags = gtk_text_iter_get_tags(&iter);
-		if (tags) {
-			len = g_slist_length(tags);
-			for(n = 0; n < len; n++) {
-				GtkTextTag* tag = (GtkTextTag*)g_slist_nth_data(tags, n);
-				if (tag) {
-					gpointer tag_data = g_object_get_data(G_OBJECT(tag), "url");
-					if (tag_data)  {
-						url = g_strdup(tag_data);
-						break;
-					}
+	tags = gtk_text_iter_get_tags(&iter);
+	if (tags) {
+		len = g_slist_length(tags);
+		for(n = 0; n < len; n++) {
+			GtkTextTag* tag = (GtkTextTag*)g_slist_nth_data(tags, n);
+			if (tag) {
+				gpointer tag_data;
+				tag_data = g_object_get_data(G_OBJECT(tag), "url");
+				if (tag_data) {
+					url = tag_data;
+					break;
+				}
+
+				user_id = g_object_get_data(G_OBJECT(tag), "user_id");
+				user_name = g_object_get_data(G_OBJECT(tag), "user_name");
+				if (user_id || user_name) {
+					url = g_strdup_printf("@%s", user_name);
+					break;
 				}
 			}
-			g_slist_free(tags);
 		}
+		g_slist_free(tags);
 	}
 
 	if (!url) return FALSE;
@@ -1226,10 +1300,21 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	toplevel = gtk_widget_get_toplevel(textview);
 	if (*url == '@') {
 		if (!is_processing) {
-			user_id = g_object_get_data(G_OBJECT(toplevel), "userid");
-			if (user_id) g_free(user_id);
-			user_id = g_strdup(url+1);
-			g_object_set_data(G_OBJECT(toplevel), "userid", user_id);
+			gchar* old_data;
+			old_data = g_object_get_data(G_OBJECT(toplevel), "user_id");
+			if (old_data) g_free(old_data);
+			old_data = g_object_get_data(G_OBJECT(toplevel), "user_name");
+			if (old_data) g_free(old_data);
+
+			g_object_set_data(G_OBJECT(toplevel), "user_id", g_strdup(user_id));
+			g_object_set_data(G_OBJECT(toplevel), "user_name", g_strdup(user_name));
+			update_friends_statuses(NULL, toplevel);
+		}
+	} else
+	if (!strncmp(url, ">>", 2)) {
+		if (!is_processing) {
+			gchar* status_id = url+2;
+			g_object_set_data(G_OBJECT(toplevel), "status_id", g_strdup(status_id));
 			update_friends_statuses(NULL, toplevel);
 		}
 	} else {
@@ -1290,9 +1375,17 @@ static void buffer_delete_range(GtkTextBuffer* buffer, GtkTextIter* start, GtkTe
 			if (tag_data) g_free(tag_data);
 			g_object_set_data(G_OBJECT(tag), "url", NULL);
 
-			tag_data = g_object_get_data(G_OBJECT(tag), "description");
+			tag_data = g_object_get_data(G_OBJECT(tag), "user_id");
 			if (tag_data) g_free(tag_data);
-			g_object_set_data(G_OBJECT(tag), "description", NULL);
+			g_object_set_data(G_OBJECT(tag), "user_id", NULL);
+
+			tag_data = g_object_get_data(G_OBJECT(tag), "user_name");
+			if (tag_data) g_free(tag_data);
+			g_object_set_data(G_OBJECT(tag), "user_name", NULL);
+
+			tag_data = g_object_get_data(G_OBJECT(tag), "user_description");
+			if (tag_data) g_free(tag_data);
+			g_object_set_data(G_OBJECT(tag), "user_description", NULL);
 		}
 		g_slist_free(tags);
 	}
@@ -1385,7 +1478,6 @@ int main(int argc, char* argv[]) {
 	GtkTooltips* tooltips = NULL;
 
 	GtkTextBuffer* buffer = NULL;
-	GtkTextTag* name_tag = NULL;
 	GtkTextTag* date_tag = NULL;
 
 #ifdef _LIBINTL_H
@@ -1444,13 +1536,6 @@ int main(int argc, char* argv[]) {
 	g_signal_connect(textview, "visibility-notify-event", G_CALLBACK(textview_visibility), NULL);
 	g_signal_connect(textview, "event-after", G_CALLBACK(textview_event_after), NULL);
 
-	/*
-	pangoFont = pango_font_description_new();
-	pango_font_description_set_family(pangoFont, "meiryo");
-	gtk_widget_modify_font(textview, pangoFont);
-	pango_font_description_free(pangoFont);
-	*/
-
 	swin = gtk_scrolled_window_new(NULL, NULL);
 	gtk_scrolled_window_set_policy(
 			GTK_SCROLLED_WINDOW(swin),
@@ -1464,23 +1549,9 @@ int main(int argc, char* argv[]) {
 	g_object_set_data(G_OBJECT(window), "buffer", buffer);
 
 	/* tags for string attributes */
-	name_tag = gtk_text_buffer_create_tag(
-			buffer,
-			"b",
-			"scale",
-			PANGO_SCALE_LARGE,
-			"underline",
-			PANGO_UNDERLINE_SINGLE,
-			"weight",
-			PANGO_WEIGHT_BOLD,
-			"foreground",
-			"#0000FF",
-			NULL);
-	g_object_set_data(G_OBJECT(buffer), "name_tag", name_tag);
-
 	date_tag = gtk_text_buffer_create_tag(
 			buffer,
-			"small",
+			"date_tag",
 			"scale",
 			PANGO_SCALE_X_SMALL,
 			"style",
@@ -1553,6 +1624,15 @@ int main(int argc, char* argv[]) {
 	gtk_widget_show(window);
 
 	load_config(window);
+
+	/*
+	pangoFont = pango_font_description_new();
+	pango_font_description_set_family(pangoFont, "meiryo");
+	gtk_widget_modify_font(textview, pangoFont);
+	pango_font_description_free(pangoFont);
+	*/
+
+
 	update_friends_statuses(window, window);
 	gtk_main();
 
