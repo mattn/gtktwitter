@@ -23,12 +23,13 @@
 # endif
 #endif
 
-#define APP_TITLE _("GtkTwitter")
-#define APP_NAME _("gtktwitter")
-#define TWITTER_UPDATE_URL         "http://twitter.com/statuses/update.xml"
-#define TWITTER_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
-#define TWITTER_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
-#define TWITTER_THREAD_STATUS_URL  "http://twitter.com/statuses/thread_timeline/%s.xml"
+#define APP_TITLE                  "GtkTwitter"
+#define APP_NAME                   "gtktwitter"
+#define SERVICE_NAME               "twitter"
+#define SERVICE_UPDATE_URL         "http://twitter.com/statuses/update.xml"
+#define SERVICE_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
+#define SERVICE_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
+#define SERVICE_THREAD_STATUS_URL  "http://twitter.com/statuses/thread_timeline/%s.xml"
 #define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
 #define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
@@ -497,7 +498,7 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	while(info.processing) {
 		gdk_threads_enter();
 		while(gtk_events_pending())
-			gtk_main_iteration_do(TRUE);
+			gtk_main_iteration_do(FALSE);
 		gdk_threads_leave();
 		g_thread_yield();
 	}
@@ -695,16 +696,16 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	user_name = g_object_get_data(G_OBJECT(window), "user_name");
 	status_id = g_object_get_data(G_OBJECT(window), "status_id");
 	if (status_id) {
-		snprintf(url, sizeof(url)-1, TWITTER_THREAD_STATUS_URL, status_id);
+		snprintf(url, sizeof(url)-1, SERVICE_THREAD_STATUS_URL, status_id);
 		/* status_id is temporary value */
 		free(status_id);
 		g_object_set_data(G_OBJECT(window), "status_id", NULL);
 	}
 	else
 	if (user_id)
-		snprintf(url, sizeof(url)-1, TWITTER_FRIENDS_STATUS_URL, user_id);
+		snprintf(url, sizeof(url)-1, SERVICE_FRIENDS_STATUS_URL, user_id);
 	else
-		strncpy(url, TWITTER_SELF_STATUS_URL, sizeof(url)-1);
+		strncpy(url, SERVICE_SELF_STATUS_URL, sizeof(url)-1);
 	memset(auth, 0, sizeof(auth));
 	snprintf(auth, sizeof(auth)-1, "%s:%s", mail, pass);
 
@@ -994,7 +995,7 @@ static gpointer post_status_thread(gpointer data) {
 
 	/* making authenticate info */
 	memset(url, 0, sizeof(url));
-	strncpy(url, TWITTER_UPDATE_URL, sizeof(url)-1);
+	strncpy(url, SERVICE_UPDATE_URL, sizeof(url)-1);
 	sanitized_message = sanitize_message_alloc(message);
 	if (!message) return NULL;
 	message = sanitized_message;
@@ -1120,7 +1121,7 @@ static gboolean login_dialog(GtkWidget* window) {
 			NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
 
-	gtk_window_set_title(GTK_WINDOW(dialog), _("GtkTwitter Login"));
+	gtk_window_set_title(GTK_WINDOW(dialog), _(APP_TITLE" Login"));
 
 	/* layout table */
 	table = gtk_table_new(2, 2, FALSE);
@@ -1256,6 +1257,8 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 	gchar* user_id = NULL;
 	gchar* user_name = NULL;
 
+	if (is_processing) return FALSE;
+
 	if (ev->type != GDK_BUTTON_RELEASE) return FALSE;
 	event = (GdkEventButton*)ev;
 	if (event->button != 1) return FALSE;
@@ -1333,6 +1336,7 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 
 static gboolean textview_motion(GtkWidget* textview, GdkEventMotion* event) {
 	gint x, y;
+	x = y = 0;
 	gtk_text_view_window_to_buffer_coords(
 			GTK_TEXT_VIEW(textview),
 			GTK_TEXT_WINDOW_WIDGET,
@@ -1344,6 +1348,7 @@ static gboolean textview_motion(GtkWidget* textview, GdkEventMotion* event) {
 
 static gboolean textview_visibility(GtkWidget* textview, GdkEventVisibility* event) {
 	gint wx, wy, x, y;
+	wx = wy = x = y = 0;
 	gdk_window_get_pointer(textview->window, &wx, &wy, NULL);
 	gtk_text_view_window_to_buffer_coords(
 			GTK_TEXT_VIEW(textview),
@@ -1356,7 +1361,7 @@ static gboolean textview_visibility(GtkWidget* textview, GdkEventVisibility* eve
 
 static void buffer_delete_range(GtkTextBuffer* buffer, GtkTextIter* start, GtkTextIter* end, gpointer user_data) {
 	GtkTextIter* iter = gtk_text_iter_copy(end);
-	while(TRUE) {
+	while(iter) {
 		GSList* tags = NULL;
 		GtkTextTag* tag;
 		int len, n;
@@ -1524,7 +1529,7 @@ int main(int argc, char* argv[]) {
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 
 	/* title logo */
-	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/twitter.png", NULL));
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/"SERVICE_NAME".png", NULL));
 	gtk_box_pack_start(GTK_BOX(vbox), image, FALSE, TRUE, 0);
 
 	/* status viewer on scrolled window */

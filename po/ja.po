@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.0.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2007-05-16 20:32+0900\n"
+"POT-Creation-Date: 2007-05-31 16:32+0900\n"
 "PO-Revision-Date: 2007-05-15 20:07+0900\n"
 "Last-Translator: mattn <mattn.jp at gmail.com>\n"
 "Language-Team: mattn <mattn.jp at gmail.com>\n"
@@ -15,57 +15,50 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../gtktwitter.c:26
-msgid "GtkTwitter"
-msgstr "GtkTwitter"
-
-#: ../gtktwitter.c:27
-msgid "gtktwitter"
-msgstr "gtktwitter"
-
-#: ../gtktwitter.c:670
+#: ../gtktwitter.c:733
 msgid "no server response"
 msgstr "サーバからの応答がありません"
 
-#: ../gtktwitter.c:679 ../gtktwitter.c:689 ../gtktwitter.c:712
-#: ../gtktwitter.c:719 ../gtktwitter.c:724 ../gtktwitter.c:953
+#: ../gtktwitter.c:742 ../gtktwitter.c:752 ../gtktwitter.c:775
+#: ../gtktwitter.c:782 ../gtktwitter.c:787 ../gtktwitter.c:1040
 msgid "unknown server response"
 msgstr "サーバからの応答が不正です"
 
-#: ../gtktwitter.c:860 ../gtktwitter.c:991
+#: ../gtktwitter.c:943 ../gtktwitter.c:1078
 msgid "updating statuses..."
 msgstr "ステータス更新中..."
 
-#: ../gtktwitter.c:988
+#: ../gtktwitter.c:1075
 msgid "posting status..."
 msgstr "ステータス送信中..."
 
-#: ../gtktwitter.c:1037
-msgid "GtkTwitter Login"
-msgstr "GtkTwitter ログイン"
+#: ../gtktwitter.c:1124
+msgid " Login"
+msgstr " ログイン"
 
 #. mail
-#: ../gtktwitter.c:1045
+#: ../gtktwitter.c:1132
 msgid "_Mail:"
 msgstr "メール(_M):"
 
 #. pass
-#: ../gtktwitter.c:1064
+#: ../gtktwitter.c:1151
 msgid "_Password:"
 msgstr "パスワード(_P):"
 
-#: ../gtktwitter.c:1503 ../gtktwitter.c:1504
+#: ../gtktwitter.c:1587 ../gtktwitter.c:1588
 msgid "go home"
 msgstr "ホーム"
 
-#: ../gtktwitter.c:1515 ../gtktwitter.c:1516
+#: ../gtktwitter.c:1599 ../gtktwitter.c:1600
 msgid "reload statuses"
 msgstr "リロード"
 
-#: ../gtktwitter.c:1527 ../gtktwitter.c:1528
+#: ../gtktwitter.c:1611 ../gtktwitter.c:1612
 msgid "post status"
 msgstr "ステータス送信"
 
-#: ../gtktwitter.c:1539 ../gtktwitter.c:1540
+#: ../gtktwitter.c:1623 ../gtktwitter.c:1624
 msgid "what are you doing?"
 msgstr "今なにしてる？"
+
