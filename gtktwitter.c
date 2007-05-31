@@ -30,12 +30,12 @@
 #define SERVICE_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
 #define SERVICE_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
 #define SERVICE_THREAD_STATUS_URL  "http://twitter.com/statuses/thread_timeline/%s.xml"
+#define USE_REPLAY_ACCESS          0
 #define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
 #define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 #define ACCEPT_LETTER_REPLY        "1234567890"
 #define RELOAD_TIMER_SPAN          (30*60*1000)
-#define USE_REPLAY_ACCESS          0
 
 #define XML_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
