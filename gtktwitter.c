@@ -498,7 +498,7 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	while(info.processing) {
 		gdk_threads_enter();
 		while(gtk_events_pending())
-			gtk_main_iteration_do(FALSE);
+			gtk_main_iteration();
 		gdk_threads_leave();
 		g_thread_yield();
 	}
@@ -1199,6 +1199,8 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 	GtkTooltips* tooltips = NULL;
 	gboolean hovering = FALSE;
 	int len, n;
+
+	if (is_processing) return;
 
 	toplevel = gtk_widget_get_toplevel(textview);
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
