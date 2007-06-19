@@ -698,7 +698,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	if (status_id) {
 		snprintf(url, sizeof(url)-1, SERVICE_THREAD_STATUS_URL, status_id);
 		/* status_id is temporary value */
-		free(status_id);
+		g_free(status_id);
 		g_object_set_data(G_OBJECT(window), "status_id", NULL);
 	}
 	else
