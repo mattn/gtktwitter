@@ -7,7 +7,7 @@ gtktwitter.exe : gtktwitter.obj gtktwitter.res
 		-LIBPATH:c:/gtk/lib \
 		gtktwitter.obj \
 		gtktwitter.res \
-		-subsystem:console \
+		-subsystem:windows \
 		gtk-win32-2.0.lib \
 		gdk-win32-2.0.lib \
 		glib-2.0.lib \

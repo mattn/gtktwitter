@@ -25,6 +25,8 @@
 
 #define APP_TITLE                  "GtkTwitter"
 #define APP_NAME                   "gtktwitter"
+#define APP_VERSION                "0.0.6"
+#define APP_URL                    "http://www.ac.cyberhome.ne.jp/~mattn/gtktwitter.xml"
 #define SERVICE_NAME               "twitter"
 #define SERVICE_UPDATE_URL         "http://twitter.com/statuses/update.xml"
 #define SERVICE_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
@@ -975,6 +977,7 @@ static gpointer post_status_thread(gpointer data) {
 	GtkWidget* entry = NULL;
 	CURL* curl = NULL;
 	CURLcode res = CURLE_OK;
+	struct curl_slist *headers = NULL;
 	int status = 0;
 
 	char url[2048];
@@ -1012,6 +1015,10 @@ static gpointer post_status_thread(gpointer data) {
 	/* initialize callback data */
 	initialize_http_response();
 
+	headers = curl_slist_append(headers, "X-Twitter-Client: "APP_NAME);
+	headers = curl_slist_append(headers, "X-Twitter-Client-Version: "APP_VERSION);
+	headers = curl_slist_append(headers, "X-Twitter-Client-URL: "APP_URL);
+
 	/* perform http */
 	curl = curl_easy_init();
 	curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -1022,9 +1029,11 @@ static gpointer post_status_thread(gpointer data) {
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
 	curl_easy_setopt(curl, CURLOPT_POST, 1);
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
+	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 	res = curl_easy_perform(curl);
 	res == CURLE_OK ? curl_easy_getinfo(curl, CURLINFO_HTTP_CODE, &status) : res;
 	curl_easy_cleanup(curl);
+	if (headers) curl_slist_free_all(headers);
 
 	if (status != 200) {
 		/* failed to the post */
@@ -1647,3 +1656,10 @@ int main(int argc, char* argv[]) {
 
 	return 0;
 }
+
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE hCurInst, HINSTANCE hPrevInst, LPSTR lpsCmdLine, int nCmdShow)
+{
+	return main(__argc, __argv);
+}
+#endif
