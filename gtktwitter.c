@@ -961,9 +961,10 @@ static void update_self_status(GtkWidget* widget, gpointer user_data) {
 
 	old_data = g_object_get_data(G_OBJECT(window), "user_id");
 	if (old_data) g_free(old_data);
-	g_object_set_data(G_OBJECT(window), "user_id", NULL);
 	old_data = g_object_get_data(G_OBJECT(window), "user_name");
 	if (old_data) g_free(old_data);
+
+	g_object_set_data(G_OBJECT(window), "user_id", NULL);
 	g_object_set_data(G_OBJECT(window), "user_name", NULL);
 
 	update_friends_statuses(NULL, window);
@@ -1294,7 +1295,7 @@ static gboolean textview_event_after(GtkWidget* textview, GdkEvent* ev) {
 				gpointer tag_data;
 				tag_data = g_object_get_data(G_OBJECT(tag), "url");
 				if (tag_data) {
-					url = tag_data;
+					url = g_strdup(tag_data);
 					break;
 				}
 
