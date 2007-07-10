@@ -1008,6 +1008,7 @@ static gpointer post_status_thread(gpointer data) {
 	if (message) {
 		strncat(url, "?status=", sizeof(url)-1);;
 		strncat(url, message, sizeof(url)-1);
+		strncat(url, "&source="APP_NAME, sizeof(url)-1);
 		free(message);
 	}
 	memset(auth, 0, sizeof(auth));
