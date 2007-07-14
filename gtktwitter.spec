@@ -69,6 +69,8 @@ update-desktop-database
 %{_datadir}/gtktwitter/post.png
 
 %changelog
+* Sat Jul  14 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
+- Updated version to 0.0.7
 * Tue May  22 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
 - Updated version to 0.0.6
 * Tue May  15 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
