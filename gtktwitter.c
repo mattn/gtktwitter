@@ -25,8 +25,8 @@
 
 #define APP_TITLE                  "GtkTwitter"
 #define APP_NAME                   "gtktwitter"
-#define APP_VERSION                "0.0.7"
-#define APP_URL                    "http://www.ac.cyberhome.ne.jp/~mattn/gtktwitter.xml"
+#define APP_VERSION                "0.0.8"
+#define APP_URL                    "http://mattn.kaoriya.net/gtktwitter.xml"
 #define SERVICE_NAME               "twitter"
 #define SERVICE_UPDATE_URL         "http://twitter.com/statuses/update.xml"
 #define SERVICE_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"

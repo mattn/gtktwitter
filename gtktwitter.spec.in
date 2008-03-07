@@ -4,7 +4,7 @@ Release:        1%{?dist}
 Summary:        A Twitter client for Linux which using GTK
 Group:          Applications/Network
 License:        GPL
-URL:            http://www.ac.cyberhome.ne.jp/~mattn
+URL:            http://mattn.kaoriya.net
 Source0:        %{name}-%{version}.tar.gz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
