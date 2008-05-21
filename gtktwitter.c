@@ -1101,14 +1101,14 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 /**
  * enter key handler
  */
-static gboolean on_entry_keyp_ress(GtkWidget *widget, GdkEventKey* event, gpointer user_data) {
+static gboolean on_entry_activate(GtkWidget *widget, gpointer user_data) {
 	char* message = (char*)gtk_entry_get_text(GTK_ENTRY(widget));
 
 	if (is_processing) return FALSE;
 
 	if (!message || strlen(message) == 0) return FALSE;
-	if (event->keyval == GDK_Return)
-		post_status(widget, user_data);
+
+	post_status(widget, user_data);
 	reset_reload_timer(gtk_widget_get_toplevel(widget));
 	return FALSE;
 }
@@ -1627,7 +1627,7 @@ int main(int argc, char* argv[]) {
 	/* text entry */
 	entry = gtk_entry_new();
 	g_object_set_data(G_OBJECT(window), "entry", entry);
-	g_signal_connect(G_OBJECT(entry), "key-press-event", G_CALLBACK(on_entry_keyp_ress), window);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), window);
 	gtk_box_pack_start(GTK_BOX(toolbox), entry, FALSE, TRUE, 0);
 	//gtk_widget_set_size_request(entry, -1, 50);
 	gtk_tooltips_set_tip(
