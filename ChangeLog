@@ -1,5 +1,6 @@
 * version 0.0.8
 	changed app link to 'http://mattn.kaoriya.net/gtktwitter.xml'.
+	move code to github from googlecode.
 * version 0.0.7
 	supported twitter user agent.
 * version 0.0.6
