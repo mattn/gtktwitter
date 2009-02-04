@@ -1,3 +1,5 @@
+* version 0.0.9
+	changed behaviour to show user's status. not user's friends timeline.
 * version 0.0.8
 	changed app link to 'http://mattn.kaoriya.net/gtktwitter.xml'.
 	move code to github from googlecode.
