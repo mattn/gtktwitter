@@ -30,7 +30,7 @@
 #define SERVICE_NAME               "twitter"
 #define SERVICE_UPDATE_URL         "http://twitter.com/statuses/update.xml"
 #define SERVICE_SELF_STATUS_URL    "http://twitter.com/statuses/friends_timeline.xml"
-#define SERVICE_FRIENDS_STATUS_URL "http://twitter.com/statuses/friends_timeline/%s.xml"
+#define SERVICE_USER_STATUS_URL    "http://twitter.com/statuses/user_timeline/%s.xml"
 #define SERVICE_THREAD_STATUS_URL  "http://twitter.com/statuses/thread_timeline/%s.xml"
 #define USE_REPLAY_ACCESS          0
 #define TINYURL_API_URL            "http://tinyurl.com/api-create.php"
@@ -705,7 +705,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	}
 	else
 	if (user_id)
-		snprintf(url, sizeof(url)-1, SERVICE_FRIENDS_STATUS_URL, user_id);
+		snprintf(url, sizeof(url)-1, SERVICE_USER_STATUS_URL, user_id);
 	else
 		strncpy(url, SERVICE_SELF_STATUS_URL, sizeof(url)-1);
 	memset(auth, 0, sizeof(auth));
