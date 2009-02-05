@@ -43,6 +43,7 @@
 
 static GdkCursor* hand_cursor = NULL;
 static GdkCursor* regular_cursor = NULL;
+static GdkCursor* watch_cursor = NULL;
 
 typedef struct _PIXBUF_CACHE {
 	char* id;
@@ -443,7 +444,6 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	PROCESS_THREAD_INFO info;
 	GError *error = NULL;
 	GThread* thread = NULL;
-	GdkCursor* cursor = gdk_cursor_new(GDK_WATCH);
 
 	if (parent) {
 		parent = gtk_widget_get_toplevel(parent);
@@ -457,9 +457,8 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 		}
 	}
 
-	if (parent) gdk_window_set_cursor(parent->window, cursor);
+	if (parent) gdk_window_set_cursor(parent->window, watch_cursor);
 	gdk_flush();
-	gdk_cursor_destroy(cursor);
 
 	gdk_threads_leave();
 
@@ -906,6 +905,7 @@ leave:
 static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
+	GtkWidget* textview = (GtkWidget*)g_object_get_data(G_OBJECT(window), "textview");
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
 	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
 	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
@@ -917,14 +917,28 @@ static void update_friends_statuses(GtkWidget* widget, gpointer user_data) {
 	is_processing = TRUE;
 
 	stop_reload_timer(window);
+	/* disable toolbox */
 	gtk_widget_set_sensitive(toolbox, FALSE);
+	/* set watch cursor at textview */
+	gdk_window_set_cursor(
+			gtk_text_view_get_window(
+				GTK_TEXT_VIEW(textview),
+				GTK_TEXT_WINDOW_TEXT),
+			watch_cursor);
 	result = process_func(update_friends_statuses_thread, window, window, _("updating statuses..."));
 	if (result) {
 		/* show error message */
 		error_dialog(window, result);
 		g_free(result);
 	}
+	/* enable toolbox */
 	gtk_widget_set_sensitive(toolbox, TRUE);
+	/* set regular cursor at textview */
+	gdk_window_set_cursor(
+			gtk_text_view_get_window(
+				GTK_TEXT_VIEW(textview),
+				GTK_TEXT_WINDOW_TEXT),
+			regular_cursor);
 	start_reload_timer(window);
 
 	is_processing = FALSE;
@@ -1048,6 +1062,7 @@ leave:
 static void post_status(GtkWidget* widget, gpointer user_data) {
 	gpointer result;
 	GtkWidget* window = (GtkWidget*)user_data;
+	GtkWidget* textview = (GtkWidget*)g_object_get_data(G_OBJECT(window), "textview");
 	GtkWidget* toolbox = (GtkWidget*)g_object_get_data(G_OBJECT(window), "toolbox");
 	char* mail = (char*)g_object_get_data(G_OBJECT(window), "mail");
 	char* pass = (char*)g_object_get_data(G_OBJECT(window), "pass");
@@ -1058,7 +1073,14 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 
 	is_processing = TRUE;
 
+	/* disable toolbox */
 	gtk_widget_set_sensitive(toolbox, FALSE);
+	/* set watch cursor at textview */
+	gdk_window_set_cursor(
+			gtk_text_view_get_window(
+				GTK_TEXT_VIEW(textview),
+				GTK_TEXT_WINDOW_TEXT),
+			watch_cursor);
 	result = process_func(post_status_thread, window, window, _("posting status..."));
 	if (!result) {
 		last_condition[0] = 0;
@@ -1069,7 +1091,14 @@ static void post_status(GtkWidget* widget, gpointer user_data) {
 		error_dialog(window, result);
 		g_free(result);
 	}
+	/* enable toolbox */
 	gtk_widget_set_sensitive(toolbox, TRUE);
+	/* set regular cursor at textview */
+	gdk_window_set_cursor(
+			gtk_text_view_get_window(
+				GTK_TEXT_VIEW(textview),
+				GTK_TEXT_WINDOW_TEXT),
+			regular_cursor);
 
 	is_processing = FALSE;
 }
@@ -1187,7 +1216,9 @@ static void textview_change_cursor(GtkWidget* textview, gint x, gint y) {
 	gboolean hovering = FALSE;
 	int len, n;
 
-	if (is_processing) return;
+	if (is_processing) {
+		return;
+	}
 
 	toplevel = gtk_widget_get_toplevel(textview);
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
@@ -1513,6 +1544,7 @@ int main(int argc, char* argv[]) {
 	/* link cursor */
 	hand_cursor = gdk_cursor_new(GDK_HAND2);
 	regular_cursor = gdk_cursor_new(GDK_XTERM);
+	watch_cursor = gdk_cursor_new(GDK_WATCH);
 
 	/* tooltips */
 	tooltips = gtk_tooltips_new();
@@ -1543,6 +1575,7 @@ int main(int argc, char* argv[]) {
 			GTK_POLICY_AUTOMATIC);
 	gtk_container_add(GTK_CONTAINER(swin), textview);
 	gtk_container_add(GTK_CONTAINER(vbox), swin);
+	g_object_set_data(G_OBJECT(window), "textview", textview);
 
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
 	g_signal_connect(G_OBJECT(buffer), "delete-range", G_CALLBACK(buffer_delete_range), NULL);
@@ -1616,7 +1649,7 @@ int main(int argc, char* argv[]) {
 	g_object_set_data(G_OBJECT(window), "entry", entry);
 	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), window);
 	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
-	//gtk_widget_set_size_request(entry, -1, 50);
+	/* gtk_widget_set_size_request(entry, -1, 50); */
 	gtk_tooltips_set_tip(
 			GTK_TOOLTIPS(tooltips),
 			entry,
