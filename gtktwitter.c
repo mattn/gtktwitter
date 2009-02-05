@@ -78,14 +78,14 @@ static size_t response_size = 0;	/* response size of data */
 static char last_condition[256] = {0};
 static int is_processing = FALSE;
 
-static initialize_http_response() {
+static void initialize_http_response() {
 	response_cond = NULL;
 	response_mime = NULL;
 	response_data = NULL;
 	response_size = 0;
 }
 
-static terminate_http_response() {
+static void terminate_http_response() {
 	if (response_cond) free(response_cond);
 	if (response_mime) free(response_mime);
 	if (response_data) free(response_data);
