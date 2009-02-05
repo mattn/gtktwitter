@@ -438,51 +438,26 @@ static gpointer process_thread(gpointer data) {
 }
 
 static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent, const gchar* message) {
-	GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	GtkWidget* vbox;
-	GtkWidget* image;
-	GdkColor color;
+	GtkWidget* loading_image = NULL;
+	GtkWidget* loading_label = NULL;
 	PROCESS_THREAD_INFO info;
 	GError *error = NULL;
-	GThread* thread;
+	GThread* thread = NULL;
 	GdkCursor* cursor = gdk_cursor_new(GDK_WATCH);
 
-	if (parent)
-		parent = gtk_widget_get_toplevel(parent);
-
-	gtk_window_set_modal(GTK_WINDOW(window), TRUE);
-	gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER_ON_PARENT);
-	gtk_widget_hide_on_delete(window);
-
-	vbox = gtk_vbox_new(FALSE, 6);
-	gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
-	gtk_container_add(GTK_CONTAINER(window), vbox);
-
-	image = gtk_image_new_from_file(DATA_DIR"/loading.gif");
-	if (image) gtk_container_add(GTK_CONTAINER(vbox), image);
-
-	if (message) {
-		GtkWidget* label = gtk_label_new(message);
-		gtk_container_add(GTK_CONTAINER(vbox), label);
-	}
-
-	gdk_color_parse("#F0F0F0", &color);
-	gtk_widget_modify_bg(window, GTK_STATE_NORMAL, &color);
-
-	gtk_widget_queue_resize(window);
-
-	gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-
 	if (parent) {
-		gtk_window_set_transient_for(
-				GTK_WINDOW(window),
-				GTK_WINDOW(parent));
-		gdk_window_set_cursor(parent->window, cursor);
+		parent = gtk_widget_get_toplevel(parent);
+		loading_image = (GtkWidget*)g_object_get_data(G_OBJECT(parent), "loading-image");
+		if (loading_image) gtk_widget_show(loading_image);
+
+		if (message) {
+			loading_label = (GtkWidget*)g_object_get_data(G_OBJECT(parent), "loading-label");
+			gtk_label_set_text(GTK_LABEL(loading_label), message);
+			gtk_widget_show(loading_label);
+		}
 	}
 
-	gtk_widget_show_all(window);
-
-	gdk_window_set_cursor(window->window, cursor);
+	if (parent) gdk_window_set_cursor(parent->window, cursor);
 	gdk_flush();
 	gdk_cursor_destroy(cursor);
 
@@ -507,11 +482,10 @@ static gpointer process_func(GThreadFunc func, gpointer data, GtkWidget* parent,
 	g_thread_join(thread);
 
 	gdk_threads_enter();
-	gtk_widget_hide(window);
+	if (loading_image) gtk_widget_hide(loading_image);
+	if (loading_label) gtk_widget_hide(loading_label);
 
-	if (parent) {
-		gdk_window_set_cursor(parent->window, NULL);
-	}
+	if (parent) gdk_window_set_cursor(parent->window, NULL);
 	return info.retval;
 }
 
@@ -898,7 +872,9 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		g_object_set_data(G_OBJECT(name_tag), "user_name", g_strdup(name));
 		g_object_set_data(G_OBJECT(name_tag), "user_description", g_strdup(desc));
 		gtk_text_buffer_insert_with_tags(buffer, &iter, name, -1, name_tag, NULL);
-		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+		gtk_text_buffer_insert(buffer, &iter, " (", -1);
+		gtk_text_buffer_insert(buffer, &iter, real, -1);
+		gtk_text_buffer_insert(buffer, &iter, ")\n", -1);
 		text = xml_decode_alloc(text);
 		insert_status_text(buffer, &iter, text);
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
@@ -1491,9 +1467,12 @@ int main(int argc, char* argv[]) {
 	GtkWidget* textview = NULL;
 	GtkWidget* image = NULL;
 	GtkWidget* button = NULL;
+	GtkWidget* label = NULL;
 	GtkWidget* entry = NULL;
 	PangoFontDescription* pangoFont = NULL;
 	GtkTooltips* tooltips = NULL;
+	GtkWidget* loading_image = NULL;
+	GtkWidget* loading_label = NULL;
 
 	GtkTextBuffer* buffer = NULL;
 	GtkTextTag* date_tag = NULL;
@@ -1522,6 +1501,9 @@ int main(int argc, char* argv[]) {
 	gdk_threads_enter();
 
 	gtk_init(&argc, &argv);
+
+	/*------------------*/
+	/* building window. */
 
 	/* main window */
 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -1584,7 +1566,8 @@ int main(int argc, char* argv[]) {
 	gtk_box_pack_start(GTK_BOX(vbox), toolbox, FALSE, TRUE, 0);
 	g_object_set_data(G_OBJECT(window), "toolbox", toolbox);
 
-	/* horizontal container box for buttons and entry */
+	/*--------------------------------------*/
+	/* horizontal container box for buttons */
 	hbox = gtk_hbox_new(FALSE, 6);
 	gtk_box_pack_start(GTK_BOX(toolbox), hbox, FALSE, TRUE, 0);
 
@@ -1612,6 +1595,34 @@ int main(int argc, char* argv[]) {
 			_("reload statuses"),
 			_("reload statuses"));
 
+	/* loading animation */
+	loading_image = gtk_image_new_from_file(DATA_DIR"/loading.gif");
+	if (loading_image) {
+		gtk_box_pack_start(GTK_BOX(hbox), loading_image, FALSE, TRUE, 0);
+		g_object_set_data(G_OBJECT(window), "loading-image", loading_image);
+	}
+
+	loading_label = gtk_label_new("");
+	gtk_box_pack_start(GTK_BOX(hbox), loading_label, FALSE, TRUE, 0);
+	g_object_set_data(G_OBJECT(window), "loading-label", loading_label);
+
+	/*----------------------------------------------------*/
+	/* horizontal container box for entry and post button */
+	hbox = gtk_hbox_new(FALSE, 6);
+	gtk_box_pack_start(GTK_BOX(toolbox), hbox, FALSE, TRUE, 0);
+
+	/* text entry */
+	entry = gtk_entry_new();
+	g_object_set_data(G_OBJECT(window), "entry", entry);
+	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), window);
+	gtk_box_pack_start(GTK_BOX(hbox), entry, TRUE, TRUE, 0);
+	//gtk_widget_set_size_request(entry, -1, 50);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			entry,
+			_("what are you doing?"),
+			_("what are you doing?"));
+
 	/* post button */
 	button = gtk_button_new();
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(post_status), window);
@@ -1624,22 +1635,13 @@ int main(int argc, char* argv[]) {
 			_("post status"),
 			_("post status"));
 
-	/* text entry */
-	entry = gtk_entry_new();
-	g_object_set_data(G_OBJECT(window), "entry", entry);
-	g_signal_connect(G_OBJECT(entry), "activate", G_CALLBACK(on_entry_activate), window);
-	gtk_box_pack_start(GTK_BOX(toolbox), entry, FALSE, TRUE, 0);
-	//gtk_widget_set_size_request(entry, -1, 50);
-	gtk_tooltips_set_tip(
-			GTK_TOOLTIPS(tooltips),
-			entry,
-			_("what are you doing?"),
-			_("what are you doing?"));
-
 	/* request initial window size */
 	gtk_widget_set_size_request(window, 300, 400);
 	gtk_widget_show_all(vbox);
 	gtk_widget_show(window);
+
+	if (loading_image) gtk_widget_hide(loading_image);
+	gtk_widget_hide(loading_label);
 
 	load_config(window);
 
@@ -1649,7 +1651,6 @@ int main(int argc, char* argv[]) {
 	gtk_widget_modify_font(textview, pangoFont);
 	pango_font_description_free(pangoFont);
 	*/
-
 
 	update_friends_statuses(window, window);
 	gtk_main();
