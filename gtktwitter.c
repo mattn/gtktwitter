@@ -37,7 +37,7 @@
 #define ACCEPT_LETTER_URL          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;/?:@&=+$,-_.!~*'%"
 #define ACCEPT_LETTER_NAME         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 #define ACCEPT_LETTER_REPLY        "1234567890"
-#define RELOAD_TIMER_SPAN          (30*60*1000)
+#define RELOAD_TIMER_SPAN          (60*1000)
 
 #define XML_CONTENT(x) (x->children ? (char*)x->children->content : NULL)
 
