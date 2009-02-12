@@ -21,11 +21,12 @@ gtktwitter.exe : gtktwitter.obj gtktwitter.res
 		shell32.lib
 
 gtktwitter.obj : gtktwitter.c
-	cl -c -GX \
+	cl -c \
 		$(CFLAGS) \
 		-Ic:/gtk/include \
 		-Ic:/gtk/include/gtk-2.0 \
 		-Ic:/gtk/include/cairo \
+		-Ic:/gtk/include/libxml2 \
 		-Ic:/gtk/lib/glib-2.0/include \
 		-Ic:/gtk/lib/gtk-2.0/include \
 		-Ic:/gtk/include/glib-2.0 \
@@ -48,3 +49,4 @@ package:
 	msgfmt -o win32package/share/locale/ja/LC_MESSAGES/gtktwitter.mo po/ja.po
 	cp libcurl.dll win32package
 	cp zlib1.dll win32package
+	cp gtktwitter.exe win32package
