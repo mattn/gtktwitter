@@ -300,8 +300,7 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 	return ret;
 }
 
-static char* url_encode_alloc(const char* str) {
-	static const int force_encode_all = TRUE;
+static char* url_encode_alloc(const char* str, int force_encode) {
 	const char* hex = "0123456789abcdef";
 
 	char* buf = NULL;
@@ -317,7 +316,7 @@ static char* url_encode_alloc(const char* str) {
 		unsigned char c = (unsigned char)*str;
 		if (c == ' ')
 			*pbuf++ = '+';
-		else if (c & 0x80 || force_encode_all) {
+		else if (c & 0x80 || force_encode) {
 			*pbuf++ = '%';
 			*pbuf++ = hex[c >> 4];
 			*pbuf++ = hex[c & 0x0f];
@@ -399,15 +398,19 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 		gchar* newurl = g_filename_from_uri(url, NULL, NULL);
 		pixbuf = gdk_pixbuf_new_from_file(newurl ? newurl : url, &_error);
 	} else {
+		char *url_escaped;
 		curl = curl_easy_init();
 		if (!curl) return NULL;
-		curl_easy_setopt(curl, CURLOPT_URL, url);
+		url_escaped = url_encode_alloc(url, FALSE);
+		if (!url_escaped) return NULL;
+		curl_easy_setopt(curl, CURLOPT_URL, url_escaped);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, handle_returned_data);
 		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, handle_returned_header);
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
+        free(url_escaped);
 		if (res == CURLE_OK) {
 			if (response_mime) loader = gdk_pixbuf_loader_new_with_mime_type(response_mime, error);
 			if (!loader) loader = gdk_pixbuf_loader_new();
@@ -993,7 +996,7 @@ static gpointer post_status_thread(gpointer data) {
 	sanitized_message = sanitize_message_alloc(message);
 	if (!message) return NULL;
 	message = sanitized_message;
-	message = url_encode_alloc(message);
+	message = url_encode_alloc(message, TRUE);
 	free(sanitized_message);
 	if (message) {
 		strncat(url, "?status=", sizeof(url)-1);;
