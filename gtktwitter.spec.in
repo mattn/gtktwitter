@@ -67,8 +67,11 @@ update-desktop-database
 %{_datadir}/gtktwitter/reload.png
 %{_datadir}/gtktwitter/home.png
 %{_datadir}/gtktwitter/post.png
+%{_datadir}/gtktwitter/config.png
 
 %changelog
+* Thu Feb  12 2009 Yasuhiro Matsumoto <mattn.jp at gmail.com>
+- Updated version to 0.1.0
 * Sat Jul  14 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
 - Updated version to 0.0.7
 * Tue May  22 2007 Yasuhiro Matsumoto <mattn.jp at gmail.com>
