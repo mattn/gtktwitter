@@ -1442,6 +1442,13 @@ static void reset_reload_timer(GtkWidget* toplevel) {
 	start_reload_timer(toplevel);
 }
 
+static void config_dialog(GtkWidget* widget, gpointer user_data) {
+	gpointer result;
+	GtkWidget* window = (GtkWidget*)user_data;
+
+	login_dialog(window);
+}
+
 /**
  * configuration
  */
@@ -1616,7 +1623,7 @@ int main(int argc, char* argv[]) {
 			_("go home"),
 			_("go home"));
 
-	/* update button */
+	/* reload button */
 	button = gtk_button_new();
 	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(update_friends_statuses), window);
 	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/reload.png", NULL));
@@ -1627,6 +1634,18 @@ int main(int argc, char* argv[]) {
 			button,
 			_("reload statuses"),
 			_("reload statuses"));
+
+	/* config button */
+	button = gtk_button_new();
+	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(config_dialog), window);
+	image = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_file(DATA_DIR"/config.png", NULL));
+	gtk_container_add(GTK_CONTAINER(button), image);
+	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, TRUE, 0);
+	gtk_tooltips_set_tip(
+			GTK_TOOLTIPS(tooltips),
+			button,
+			_("show config dialog"),
+			_("show config dialog"));
 
 	/* loading animation */
 	loading_image = gtk_image_new_from_file(DATA_DIR"/loading.gif");
