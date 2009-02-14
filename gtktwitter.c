@@ -269,7 +269,7 @@ static char* get_tiny_url_alloc(const char* url, GError** error) {
 	GError* _error = NULL;
 	CURL* curl;
 	char* ret = NULL;
-	int status = 0;
+	long status = 0;
 
 	snprintf(api_url, sizeof(api_url)-1, "%s/?url=%s", TINYURL_API_URL, url);
 
@@ -501,7 +501,7 @@ static void error_dialog(GtkWidget* widget, const char* message) {
 			(GtkDialogFlags)(GTK_DIALOG_MODAL),
 			GTK_MESSAGE_WARNING,
 			GTK_BUTTONS_CLOSE,
-			message);
+			message, NULL);
 	gtk_window_set_title(GTK_WINDOW(dialog), APP_TITLE);
 	gtk_widget_show(dialog);
 	gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
@@ -639,7 +639,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 	CURL* curl = NULL;
 	CURLcode res = CURLE_OK;
 	struct curl_slist *headers = NULL;
-	int status = 0;
+	long status = 0;
 	gchar* user_id = NULL;
 	gchar* user_name = NULL;
 	gchar* status_id = NULL;
@@ -972,7 +972,7 @@ static gpointer post_status_thread(gpointer data) {
 	CURL* curl = NULL;
 	CURLcode res = CURLE_OK;
 	struct curl_slist *headers = NULL;
-	int status = 0;
+	long status = 0;
 
 	char url[2048];
 	char auth[512];
