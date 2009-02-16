@@ -118,7 +118,7 @@ static time_t strtotime(char *s) {
 	};
 
 	os = s;
-	/* Sunday, */
+	/* Sunday */
 	for(i = 0; i < sizeof(wday)/sizeof(wday[0]); i++) {
 		if (strncmp(s, wday[i], strlen(wday[i])) == 0) {
 			s += strlen(wday[i]);
@@ -130,51 +130,43 @@ static time_t strtotime(char *s) {
 		}
 	}
 	if (i == sizeof(wday)/sizeof(wday[0])) return -1;
-	if (*s++ != ',' || *s++ != ' ') return -1;
-
-	/* 25- */
-	if (!isdigit(s[0]) || !isdigit(s[1]) || (s[2]!='-' && s[2]!=' ')) return -1;
-	tm.tm_mday = strtol(s, 0, 10);
-	s += 3;
-
-	/* Jan- */
-	for(i = 0; i<sizeof(mon)/sizeof(mon[0]); i++) {
-		if (strncmp(s, mon[i], 3) == 0) {
-			tm.tm_mon = i;
-			s += 3;
-			break;
-		}
-	}
-	if (i == sizeof(mon)/sizeof(mon[0])) return -1;
-	if (s[0] != '-' && s[0] != ' ') return -1;
+	if (*s != ',' && *s != ' ') return -1;
 	s++;
 
-	/* 2002 */
-	if (!isdigit(s[0]) || !isdigit(s[1])) return -1;
-	tm.tm_year = strtol(s, 0, 10);
-	s += 2;
-	if (isdigit(s[0]) && isdigit(s[1]))
-		s += 2;
-	else {
-		tm.tm_year += (tm.tm_year <= 68) ? 2000 : 1900;
-	}
-	isleap = (tm.tm_year % 4 == 0)
-		&& (tm.tm_year % 100 != 0 || tm.tm_year % 400 == 0);
-	if (tm.tm_mday == 0 || tm.tm_mday > mday[isleap][tm.tm_mon]) return -1;
-	tm.tm_year -= 1900;
-	if (*s++ != ' ') return -1;
+	/* Jan */
+	if (*s != ',' && *s != ' ') return -1;
+	s++;
 
-	if (!isdigit(s[0]) || !isdigit(s[1]) || s[2]!=':'
-	 || !isdigit(s[3]) || !isdigit(s[4]) || s[5]!=':'
-	 || !isdigit(s[6]) || !isdigit(s[7]) || s[8]!=' ') return -1;
+	/* 25 */
+	tm.tm_mday = atoi(s);
+	while (isdigit(*s)) s++;
+	if (*s != ',' && *s != ' ') return -1;
+	s++;
 
+	/* 00:00:00 */
+	if (!(isdigit(s[0]) && isdigit(s[1]) && s[2] == ':'
+	   && isdigit(s[3]) && isdigit(s[4]) && s[5] == ':'
+	   && isdigit(s[6]) && isdigit(s[7]) && s[8] == ' ')) return -1;
 	tm.tm_hour = atoi(s);
 	tm.tm_min = atoi(s+3);
 	tm.tm_sec = atoi(s+6);
 	if (tm.tm_hour >= 24 || tm.tm_min >= 60 || tm.tm_sec >= 60) return -1;
 	s += 9;
 
-	if (strncmp(s, "GMT", 3) != 0) return -1;
+	/* +0000 */
+	if (s[0] == '+' || s[1] == '-') s++;
+	while (isdigit(*s)) s++;
+	if (*s != ',' && *s != ' ') return -1;
+	s++;
+
+	/* 2002 */
+	tm.tm_year = atoi(s) - 1900;
+	/*
+	while (isdigit(*s)) s++;
+	if (*s != ',' && *s != ' ') return -1;
+	s++;
+	*/
+
 	tm.tm_yday = 0;
 	return mktime(&tm);
 }
@@ -800,6 +792,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		char* date = NULL;
 		GdkPixbuf* pixbuf = NULL;
 		int cache;
+		//time_t dt;
 
 		/* status nodes */
 		xmlNodePtr status = nodes->nodeTab[n];
@@ -880,6 +873,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		text = xml_decode_alloc(text);
 		insert_status_text(buffer, &iter, text);
 		gtk_text_buffer_insert(buffer, &iter, "\n", -1);
+		//dt = strtotime(date);
 		gtk_text_buffer_insert_with_tags(buffer, &iter, date, -1, date_tag, NULL);
 		free(text);
 		gtk_text_buffer_insert(buffer, &iter, "\n\n", -1);
