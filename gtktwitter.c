@@ -377,7 +377,7 @@ char* sanitize_message_alloc(const char* message) {
 /**
  * loading icon
  */
-static GdkPixbuf* url2pixbuf(const char* url, GError** error, int width, int height) {
+static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 	GdkPixbuf* pixbuf = NULL;
 	GdkPixbufLoader* loader = NULL;
 	GdkPixbufFormat* format = NULL;
@@ -406,9 +406,9 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error, int width, int hei
 		curl_easy_cleanup(curl);
 		free(url_escaped);
 		if (res == CURLE_OK) {
+			printf("mime %s\n", response_mime);
 			if (response_mime) loader = (GdkPixbufLoader*)gdk_pixbuf_loader_new_with_mime_type(response_mime, error);
 			if (!loader) loader = gdk_pixbuf_loader_new();
-			gdk_pixbuf_loader_set_size(loader, 32, 32);
 			if (gdk_pixbuf_loader_write(loader, (const guchar*)response_data, response_size, &_error)) {
 				pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
 				format = gdk_pixbuf_loader_get_format(loader);
@@ -836,7 +836,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 			}
 		}
 		if (!pixbuf) {
-			pixbuf = url2pixbuf((char*)icon, NULL, 32, 32);
+			pixbuf = url2pixbuf((char*)icon, NULL);
 			if (pixbuf) {
 				pixbuf_cache[cache].id = id;
 				pixbuf_cache[cache].pixbuf = pixbuf;
@@ -852,7 +852,11 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 		 *
 		 */
 		gdk_threads_enter();
-		if (pixbuf) gtk_text_buffer_insert_pixbuf(buffer, &iter, pixbuf);
+		if (pixbuf) {
+			GdkPixbuf* tmp = gdk_pixbuf_scale_simple(pixbuf, 32, 32, GDK_INTERP_NEAREST);
+			if (tmp) pixbuf = tmp;
+			gtk_text_buffer_insert_pixbuf(buffer, &iter, pixbuf);
+		}
 		gtk_text_buffer_insert(buffer, &iter, " ", -1);
 		name_tag = gtk_text_buffer_create_tag(
 				buffer,
