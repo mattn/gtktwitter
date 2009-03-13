@@ -1,5 +1,7 @@
 #include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk/gdkkeysyms.h>
+#include <glib/gconvert.h>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 #include <libxml/xpathInternals.h>
@@ -375,7 +377,7 @@ char* sanitize_message_alloc(const char* message) {
 /**
  * loading icon
  */
-static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
+static GdkPixbuf* url2pixbuf(const char* url, GError** error, int width, int height) {
 	GdkPixbuf* pixbuf = NULL;
 	GdkPixbufLoader* loader = NULL;
 	GdkPixbufFormat* format = NULL;
@@ -402,10 +404,11 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, APP_NAME);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
-        free(url_escaped);
+		free(url_escaped);
 		if (res == CURLE_OK) {
-			if (response_mime) loader = gdk_pixbuf_loader_new_with_mime_type(response_mime, error);
+			if (response_mime) loader = (GdkPixbufLoader*)gdk_pixbuf_loader_new_with_mime_type(response_mime, error);
 			if (!loader) loader = gdk_pixbuf_loader_new();
+			gdk_pixbuf_loader_set_size(loader, 32, 32);
 			if (gdk_pixbuf_loader_write(loader, (const guchar*)response_data, response_size, &_error)) {
 				pixbuf = gdk_pixbuf_loader_get_pixbuf(loader);
 				format = gdk_pixbuf_loader_get_format(loader);
@@ -833,7 +836,7 @@ static gpointer update_friends_statuses_thread(gpointer data) {
 			}
 		}
 		if (!pixbuf) {
-			pixbuf = url2pixbuf((char*)icon, NULL);
+			pixbuf = url2pixbuf((char*)icon, NULL, 32, 32);
 			if (pixbuf) {
 				pixbuf_cache[cache].id = id;
 				pixbuf_cache[cache].pixbuf = pixbuf;
