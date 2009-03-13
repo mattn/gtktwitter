@@ -406,7 +406,6 @@ static GdkPixbuf* url2pixbuf(const char* url, GError** error) {
 		curl_easy_cleanup(curl);
 		free(url_escaped);
 		if (res == CURLE_OK) {
-			printf("mime %s\n", response_mime);
 			if (response_mime) loader = (GdkPixbufLoader*)gdk_pixbuf_loader_new_with_mime_type(response_mime, error);
 			if (!loader) loader = gdk_pixbuf_loader_new();
 			if (gdk_pixbuf_loader_write(loader, (const guchar*)response_data, response_size, &_error)) {
