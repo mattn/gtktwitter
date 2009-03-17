@@ -228,6 +228,10 @@ static char* xml_decode_alloc(const char* str) {
 	memset(buf, 0, len+1);
 	pbuf = (unsigned char*)buf;
 	while(*str) {
+		if (*str == '<') {
+            char* ptr = strchr(str, '>');
+			if (ptr) str = ptr + 1;
+		} else
 		if (!memcmp(str, "&amp;", 5)) {
 			strcat((char*)pbuf++, "&");
 			str += 5;
