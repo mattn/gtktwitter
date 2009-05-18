@@ -1527,11 +1527,11 @@ int main(int argc, char* argv[]) {
 
 #ifdef LOCALE_SISO639LANGNAME
 	if (getenv("LANG") == NULL) {
-		char szLang[256] = {0};
-		if (GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SISO639LANGNAME, szLang, sizeof(szLang))) {
-			char szEnv[256] = {0};
-			sprintf(szEnv, "LANG=%s", szLang);
-			putenv(szEnv);
+		char lang[256] = {0};
+		if (GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_SISO639LANGNAME, lang, sizeof(lang))) {
+			char lang[256] = {0};
+			sprintf(lang, "LANG=%s", lang);
+			putenv(lang);
 		}
 	}
 #endif
