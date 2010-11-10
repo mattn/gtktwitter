@@ -1,1 +1,11 @@
 GtkTwitter : Twitter client for GTK
+
+GtkTwitter is obsolute:
+	Twitter changed authentication mechanism from HTTP Basic Auth to OAuth.
+	And twitter regulated to include 'twitter' in client applications name.
+	Thus, GtkTwitter was dead.
+
+	But GtkTwitter waked up named as 'GtkTweeter'.
+
+	see: http://github.com/mattn/gtktweeter
+
